@@ -1,0 +1,506 @@
+{
+  "config": {
+    "argv": [
+      "/usr/local/bin/node",
+      "/workspace/qa-testing-manager/examples/playwright-sample/node_modules/@playwright/test/cli.js",
+      "test"
+    ],
+    "configFile": "/workspace/qa-testing-manager/examples/playwright-sample/playwright.config.ts",
+    "rootDir": "/workspace/qa-testing-manager/examples/playwright-sample/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/workspace/qa-testing-manager/examples/playwright-sample/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/workspace/qa-testing-manager/examples/playwright-sample/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/workspace/qa-testing-manager/examples/playwright-sample/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "chromium",
+        "testDir": "/workspace/qa-testing-manager/examples/playwright-sample/tests",
+        "snapshotDir": "/workspace/qa-testing-manager/examples/playwright-sample/tests",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://127.0.0.1:4173",
+          "trace": "off",
+          "screenshot": "only-on-failure",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.8127.18 Safari/537.36",
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "screen": {
+            "width": 1920,
+            "height": 1080
+          },
+          "deviceScaleFactor": 1,
+          "isMobile": false,
+          "hasTouch": false,
+          "defaultBrowserType": "chromium"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "chromium"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "report.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.65.0",
+    "workers": 4,
+    "webServer": {
+      "command": "node serve.mjs",
+      "url": "http://127.0.0.1:4173",
+      "reuseExistingServer": true
+    }
+  },
+  "suites": [
+    {
+      "title": "login.spec.ts",
+      "file": "login.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Login",
+          "file": "login.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "valid credentials show welcome message",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "qtm",
+                      "description": "LOGIN-001",
+                      "location": {
+                        "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                        "line": 5,
+                        "column": 3
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 243,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-07T23:18:33.872Z",
+                      "annotations": [
+                        {
+                          "type": "qtm",
+                          "description": "LOGIN-001",
+                          "location": {
+                            "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                            "line": 5,
+                            "column": 3
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "41d3fd2474a19feb00a1-7ea7196e8baa3d69157c",
+              "file": "login.spec.ts",
+              "line": 5,
+              "column": 3
+            },
+            {
+              "title": "invalid credentials show an error",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "qtm",
+                      "description": "LOGIN-002",
+                      "location": {
+                        "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                        "line": 13,
+                        "column": 3
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 192,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-07T23:18:34.276Z",
+                      "annotations": [
+                        {
+                          "type": "qtm",
+                          "description": "LOGIN-002",
+                          "location": {
+                            "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                            "line": 13,
+                            "column": 3
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "41d3fd2474a19feb00a1-6f84cff5463577b2e70a",
+              "file": "login.spec.ts",
+              "line": 13,
+              "column": 3
+            },
+            {
+              "title": "remember-me checkbox is available",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Feature not implemented in the sample site yet",
+                      "location": {
+                        "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                        "line": 22,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 83,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-07T23:18:34.482Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Feature not implemented in the sample site yet",
+                          "location": {
+                            "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                            "line": 22,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "41d3fd2474a19feb00a1-6e7865effe8675640159",
+              "file": "login.spec.ts",
+              "line": 21,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Demonstration outcomes",
+          "file": "login.spec.ts",
+          "line": 28,
+          "column": 6,
+          "specs": [
+            {
+              "title": "DEMO: intentionally failing assertion",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 1090,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveTitle\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected: \u001b[32m\"Dashboard\"\u001b[39m\nReceived: \u001b[31m\"Sample Login\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveTitle\" with timeout 1000ms\u001b[22m\n\u001b[2m    11 × locator resolved to <html lang=\"en\">…</html>\u001b[22m\n\u001b[2m       - unexpected value \"Sample Login\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveTitle\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected: \u001b[32m\"Dashboard\"\u001b[39m\nReceived: \u001b[31m\"Sample Login\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveTitle\" with timeout 1000ms\u001b[22m\n\u001b[2m    11 × locator resolved to <html lang=\"en\">…</html>\u001b[22m\n\u001b[2m       - unexpected value \"Sample Login\"\u001b[22m\n\n    at /workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts:31:24",
+                        "location": {
+                          "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                          "column": 24,
+                          "line": 31
+                        },
+                        "snippet": "  29 |   test('DEMO: intentionally failing assertion', async ({ page }) => {\n  30 |     await page.goto('/');\n> 31 |     await expect(page).toHaveTitle('Dashboard', { timeout: 1000 });\n     |                        ^\n  32 |   });\n  33 |\n  34 |   test('DEMO: flaky on first attempt, passes on retry', async ({ page }, testInfo) => {"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                            "column": 24,
+                            "line": 31
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveTitle\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected: \u001b[32m\"Dashboard\"\u001b[39m\nReceived: \u001b[31m\"Sample Login\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveTitle\" with timeout 1000ms\u001b[22m\n\u001b[2m    11 × locator resolved to <html lang=\"en\">…</html>\u001b[22m\n\u001b[2m       - unexpected value \"Sample Login\"\u001b[22m\n\n\n  29 |   test('DEMO: intentionally failing assertion', async ({ page }) => {\n  30 |     await page.goto('/');\n> 31 |     await expect(page).toHaveTitle('Dashboard', { timeout: 1000 });\n     |                        ^\n  32 |   });\n  33 |\n  34 |   test('DEMO: flaky on first attempt, passes on retry', async ({ page }, testInfo) => {\n    at /workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts:31:24"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-07T23:18:34.581Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/workspace/qa-testing-manager/examples/playwright-sample/test-results/login-Demonstration-outcom-2a62b-ntionally-failing-assertion-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/workspace/qa-testing-manager/examples/playwright-sample/test-results/login-Demonstration-outcom-2a62b-ntionally-failing-assertion-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                        "column": 24,
+                        "line": 31
+                      }
+                    },
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 1141,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveTitle\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected: \u001b[32m\"Dashboard\"\u001b[39m\nReceived: \u001b[31m\"Sample Login\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveTitle\" with timeout 1000ms\u001b[22m\n\u001b[2m    11 × locator resolved to <html lang=\"en\">…</html>\u001b[22m\n\u001b[2m       - unexpected value \"Sample Login\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveTitle\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected: \u001b[32m\"Dashboard\"\u001b[39m\nReceived: \u001b[31m\"Sample Login\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveTitle\" with timeout 1000ms\u001b[22m\n\u001b[2m    11 × locator resolved to <html lang=\"en\">…</html>\u001b[22m\n\u001b[2m       - unexpected value \"Sample Login\"\u001b[22m\n\n    at /workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts:31:24",
+                        "location": {
+                          "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                          "column": 24,
+                          "line": 31
+                        },
+                        "snippet": "  29 |   test('DEMO: intentionally failing assertion', async ({ page }) => {\n  30 |     await page.goto('/');\n> 31 |     await expect(page).toHaveTitle('Dashboard', { timeout: 1000 });\n     |                        ^\n  32 |   });\n  33 |\n  34 |   test('DEMO: flaky on first attempt, passes on retry', async ({ page }, testInfo) => {"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                            "column": 24,
+                            "line": 31
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveTitle\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected: \u001b[32m\"Dashboard\"\u001b[39m\nReceived: \u001b[31m\"Sample Login\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveTitle\" with timeout 1000ms\u001b[22m\n\u001b[2m    11 × locator resolved to <html lang=\"en\">…</html>\u001b[22m\n\u001b[2m       - unexpected value \"Sample Login\"\u001b[22m\n\n\n  29 |   test('DEMO: intentionally failing assertion', async ({ page }) => {\n  30 |     await page.goto('/');\n> 31 |     await expect(page).toHaveTitle('Dashboard', { timeout: 1000 });\n     |                        ^\n  32 |   });\n  33 |\n  34 |   test('DEMO: flaky on first attempt, passes on retry', async ({ page }, testInfo) => {\n    at /workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts:31:24"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-11-07T23:18:36.569Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/workspace/qa-testing-manager/examples/playwright-sample/test-results/login-Demonstration-outcom-2a62b-ntionally-failing-assertion-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/workspace/qa-testing-manager/examples/playwright-sample/test-results/login-Demonstration-outcom-2a62b-ntionally-failing-assertion-chromium-retry1/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                        "column": 24,
+                        "line": 31
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "41d3fd2474a19feb00a1-d39b895228aa681c9397",
+              "file": "login.spec.ts",
+              "line": 29,
+              "column": 3
+            },
+            {
+              "title": "DEMO: flaky on first attempt, passes on retry",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 173,
+                      "error": {
+                        "message": "Error: fails on purpose on the first attempt\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m",
+                        "stack": "Error: fails on purpose on the first attempt\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n    at /workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts:36:69",
+                        "location": {
+                          "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                          "column": 69,
+                          "line": 36
+                        },
+                        "snippet": "  34 |   test('DEMO: flaky on first attempt, passes on retry', async ({ page }, testInfo) => {\n  35 |     await page.goto('/');\n> 36 |     expect(testInfo.retry, 'fails on purpose on the first attempt').toBeGreaterThan(0);\n     |                                                                     ^\n  37 |   });\n  38 | });\n  39 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                            "column": 69,
+                            "line": 36
+                          },
+                          "message": "Error: fails on purpose on the first attempt\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n\n  34 |   test('DEMO: flaky on first attempt, passes on retry', async ({ page }, testInfo) => {\n  35 |     await page.goto('/');\n> 36 |     expect(testInfo.retry, 'fails on purpose on the first attempt').toBeGreaterThan(0);\n     |                                                                     ^\n  37 |   });\n  38 | });\n  39 |\n    at /workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts:36:69"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-07T23:18:38.675Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/workspace/qa-testing-manager/examples/playwright-sample/test-results/login-Demonstration-outcom-0ac1e-rst-attempt-passes-on-retry-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/workspace/qa-testing-manager/examples/playwright-sample/test-results/login-Demonstration-outcom-0ac1e-rst-attempt-passes-on-retry-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/workspace/qa-testing-manager/examples/playwright-sample/tests/login.spec.ts",
+                        "column": 69,
+                        "line": 36
+                      }
+                    },
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 148,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-11-07T23:18:39.662Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "flaky"
+                }
+              ],
+              "id": "41d3fd2474a19feb00a1-cecc4e7abd390c46af82",
+              "file": "login.spec.ts",
+              "line": 34,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-07T23:18:33.004Z",
+    "duration": 6987.954,
+    "expected": 2,
+    "skipped": 1,
+    "unexpected": 1,
+    "flaky": 1
+  }
+}

@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+  - examples/*
+
+onlyBuiltDependencies:
+  - "@prisma/client"
+  - "@prisma/engines"
+  - "@embedded-postgres/linux-x64"
+  - argon2
+  - esbuild
+  - prisma

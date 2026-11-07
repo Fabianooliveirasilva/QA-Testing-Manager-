@@ -1,0 +1,33 @@
+{
+  "name": "qa-testing-manager",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.20.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "build:shared": "pnpm --filter @qtm/shared build",
+    "db:start": "node scripts/dev-db.mjs",
+    "db:migrate": "pnpm --filter @qtm/api db:migrate",
+    "db:deploy": "pnpm --filter @qtm/api db:deploy",
+    "db:seed": "pnpm --filter @qtm/api db:seed",
+    "dev:api": "pnpm build:shared && pnpm --filter @qtm/api dev",
+    "dev:web": "pnpm build:shared && pnpm --filter @qtm/web dev",
+    "lint": "eslint .",
+    "typecheck": "pnpm build:shared && pnpm -r --parallel typecheck",
+    "test": "pnpm build:shared && pnpm -r test",
+    "test:e2e": "pnpm --filter @qtm/web test:e2e",
+    "build": "pnpm build:shared && pnpm --filter @qtm/api build && pnpm --filter @qtm/web build",
+    "audit:deps": "pnpm audit --audit-level high"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "embedded-postgres": "17.11.0-beta.19",
+    "eslint": "9.39.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.14.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.1"
+  }
+}

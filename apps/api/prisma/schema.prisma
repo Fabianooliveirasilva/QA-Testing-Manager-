@@ -1,0 +1,525 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum Priority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TestType {
+  FUNCTIONAL
+  REGRESSION
+  SMOKE
+  INTEGRATION
+  API
+  E2E
+  EXPLORATORY
+  SECURITY
+}
+
+enum TestCaseStatus {
+  DRAFT
+  READY
+  DEPRECATED
+}
+
+enum TestPlanStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum TestRunStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABORTED
+}
+
+enum RunSource {
+  MANUAL
+  PLAYWRIGHT
+}
+
+enum ResultStatus {
+  NOT_RUN
+  PASSED
+  FAILED
+  BLOCKED
+  SKIPPED
+}
+
+enum BugSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum BugStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  REOPENED
+}
+
+enum AttachmentEntityType {
+  TEST_CASE
+  TEST_RESULT
+  BUG
+}
+
+enum AutomationStatus {
+  PASSED
+  FAILED
+  INTERRUPTED
+}
+
+model User {
+  id               String    @id @default(uuid()) @db.Uuid
+  name             String
+  email            String    @unique
+  passwordHash     String    @map("password_hash")
+  failedLoginCount Int       @default(0) @map("failed_login_count")
+  lockedUntil      DateTime? @map("locked_until")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  sessions           Session[]
+  passwordResets     PasswordResetToken[]
+  memberships        OrganizationMember[]
+  projectMemberships ProjectMember[]
+  ledProjects        Project[]            @relation("ProjectLead")
+  createdTestCases   TestCase[]           @relation("TestCaseCreator")
+  assignedTestCases  TestCase[]           @relation("TestCaseAssignee")
+  executedRuns       TestRun[]
+  executedResults    TestResult[]
+  createdBugs        Bug[]                @relation("BugCreator")
+  assignedBugs       Bug[]                @relation("BugAssignee")
+  bugHistory         BugHistory[]
+  attachments        Attachment[]
+  auditLogs          AuditLog[]
+  aiRequests         AiRequest[]
+  apiTokens          ApiToken[]
+
+  @@map("users")
+}
+
+/// Opaque server-side sessions; only the SHA-256 of the token is stored.
+model Session {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  tokenHash         String   @unique @map("token_hash")
+  csrfToken         String   @map("csrf_token")
+  userAgent         String?  @map("user_agent")
+  ip                String?
+  expiresAt         DateTime @map("expires_at")
+  absoluteExpiresAt DateTime @map("absolute_expires_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  lastUsedAt        DateTime @default(now()) @map("last_used_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model Organization {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  /// Explicit opt-in before any project data is sent to an external AI provider.
+  aiEnabled Boolean  @default(false) @map("ai_enabled")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  members   OrganizationMember[]
+  projects  Project[]
+  auditLogs AuditLog[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  role           OrgRole
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+model Project {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  name           String
+  description    String        @default("")
+  status         ProjectStatus @default(ACTIVE)
+  leadId         String?       @map("lead_id") @db.Uuid
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  organization         Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead                 User?                 @relation("ProjectLead", fields: [leadId], references: [id], onDelete: SetNull)
+  members              ProjectMember[]
+  suites               TestSuite[]
+  testCases            TestCase[]
+  testPlans            TestPlan[]
+  testRuns             TestRun[]
+  bugs                 Bug[]
+  attachments          Attachment[]
+  automationExecutions AutomationExecution[]
+  apiTokens            ApiToken[]
+
+  @@index([organizationId, status])
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model TestSuite {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @map("project_id") @db.Uuid
+  name        String
+  description String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testCases TestCase[]
+
+  @@unique([projectId, name])
+  @@map("test_suites")
+}
+
+model TestCase {
+  id             String         @id @default(uuid()) @db.Uuid
+  projectId      String         @map("project_id") @db.Uuid
+  suiteId        String         @map("suite_id") @db.Uuid
+  title          String
+  description    String         @default("")
+  preconditions  String         @default("")
+  priority       Priority       @default(MEDIUM)
+  type           TestType       @default(FUNCTIONAL)
+  status         TestCaseStatus @default(DRAFT)
+  environment    String         @default("")
+  expectedResult String         @default("") @map("expected_result")
+  tags           String[]       @default([])
+  /// Identifier used to match Playwright results (annotation `qtm` or full test title path).
+  automationKey  String?        @map("automation_key")
+  aiGenerated    Boolean        @default(false) @map("ai_generated")
+  assigneeId     String?        @map("assignee_id") @db.Uuid
+  createdById    String         @map("created_by") @db.Uuid
+  deletedAt      DateTime?      @map("deleted_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  project   Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  suite     TestSuite      @relation(fields: [suiteId], references: [id], onDelete: Restrict)
+  assignee  User?          @relation("TestCaseAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdBy User           @relation("TestCaseCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  steps     TestStep[]
+  planCases TestPlanCase[]
+  results   TestResult[]
+  bugs      Bug[]
+
+  @@unique([projectId, automationKey])
+  @@index([projectId, deletedAt])
+  @@index([suiteId])
+  @@map("test_cases")
+}
+
+model TestStep {
+  id             String @id @default(uuid()) @db.Uuid
+  testCaseId     String @map("test_case_id") @db.Uuid
+  position       Int
+  action         String
+  expectedResult String @default("") @map("expected_result")
+
+  testCase TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  @@unique([testCaseId, position])
+  @@map("test_steps")
+}
+
+model TestPlan {
+  id          String         @id @default(uuid()) @db.Uuid
+  projectId   String         @map("project_id") @db.Uuid
+  name        String
+  description String         @default("")
+  scope       String         @default("")
+  environment String         @default("")
+  status      TestPlanStatus @default(DRAFT)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  project Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  cases   TestPlanCase[]
+  runs    TestRun[]
+
+  @@index([projectId])
+  @@map("test_plans")
+}
+
+model TestPlanCase {
+  testPlanId String @map("test_plan_id") @db.Uuid
+  testCaseId String @map("test_case_id") @db.Uuid
+
+  testPlan TestPlan @relation(fields: [testPlanId], references: [id], onDelete: Cascade)
+  testCase TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  @@id([testPlanId, testCaseId])
+  @@map("test_plan_cases")
+}
+
+model TestRun {
+  id           String        @id @default(uuid()) @db.Uuid
+  projectId    String        @map("project_id") @db.Uuid
+  testPlanId   String?       @map("test_plan_id") @db.Uuid
+  name         String
+  environment  String        @default("")
+  source       RunSource     @default(MANUAL)
+  status       TestRunStatus @default(IN_PROGRESS)
+  startedAt    DateTime      @default(now()) @map("started_at")
+  finishedAt   DateTime?     @map("finished_at")
+  executedById String        @map("executed_by") @db.Uuid
+
+  project    Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testPlan   TestPlan?            @relation(fields: [testPlanId], references: [id], onDelete: SetNull)
+  executedBy User                 @relation(fields: [executedById], references: [id], onDelete: Restrict)
+  results    TestResult[]
+  automation AutomationExecution?
+
+  @@index([projectId, startedAt])
+  @@map("test_runs")
+}
+
+model TestResult {
+  id            String       @id @default(uuid()) @db.Uuid
+  testRunId     String       @map("test_run_id") @db.Uuid
+  /// Null for automated results that could not be matched to a managed test case.
+  testCaseId    String?      @map("test_case_id") @db.Uuid
+  title         String
+  status        ResultStatus @default(NOT_RUN)
+  actualResult  String       @default("") @map("actual_result")
+  notes         String       @default("")
+  durationMs    Int?         @map("duration_ms")
+  retries       Int          @default(0)
+  errorMessage  String?      @map("error_message")
+  errorStack    String?      @map("error_stack")
+  automationKey String?      @map("automation_key")
+  metadata      Json?
+  executedById  String?      @map("executed_by") @db.Uuid
+  executedAt    DateTime?    @map("executed_at")
+
+  testRun    TestRun   @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  testCase   TestCase? @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
+  executedBy User?     @relation(fields: [executedById], references: [id], onDelete: SetNull)
+  bugs       Bug[]
+
+  @@index([testRunId])
+  @@index([testCaseId])
+  @@map("test_results")
+}
+
+model Bug {
+  id               String      @id @default(uuid()) @db.Uuid
+  projectId        String      @map("project_id") @db.Uuid
+  testCaseId       String?     @map("test_case_id") @db.Uuid
+  testResultId     String?     @map("test_result_id") @db.Uuid
+  title            String
+  description      String      @default("")
+  stepsToReproduce String      @default("") @map("steps_to_reproduce")
+  expectedResult   String      @default("") @map("expected_result")
+  actualResult     String      @default("") @map("actual_result")
+  severity         BugSeverity @default(MEDIUM)
+  priority         Priority    @default(MEDIUM)
+  status           BugStatus   @default(OPEN)
+  environment      String      @default("")
+  browser          String      @default("")
+  version          String      @default("")
+  assigneeId       String?     @map("assigned_to") @db.Uuid
+  createdById      String      @map("created_by") @db.Uuid
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  project    Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testCase   TestCase?    @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
+  testResult TestResult?  @relation(fields: [testResultId], references: [id], onDelete: SetNull)
+  assignee   User?        @relation("BugAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdBy  User         @relation("BugCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  history    BugHistory[]
+
+  @@index([projectId, status])
+  @@index([projectId, severity])
+  @@map("bugs")
+}
+
+model BugHistory {
+  id        String   @id @default(uuid()) @db.Uuid
+  bugId     String   @map("bug_id") @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  field     String
+  fromValue String?  @map("from_value")
+  toValue   String?  @map("to_value")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  bug  Bug   @relation(fields: [bugId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([bugId, createdAt])
+  @@map("bug_history")
+}
+
+model Attachment {
+  id           String               @id @default(uuid()) @db.Uuid
+  projectId    String               @map("project_id") @db.Uuid
+  entityType   AttachmentEntityType @map("entity_type")
+  entityId     String               @map("entity_id") @db.Uuid
+  fileName     String               @map("file_name")
+  storageKey   String               @unique @map("storage_key")
+  mimeType     String               @map("mime_type")
+  size         Int
+  sha256       String
+  uploadedById String?              @map("uploaded_by") @db.Uuid
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([projectId, entityType, entityId])
+  @@map("attachments")
+}
+
+model AutomationExecution {
+  id              String           @id @default(uuid()) @db.Uuid
+  projectId       String           @map("project_id") @db.Uuid
+  testRunId       String           @unique @map("test_run_id") @db.Uuid
+  executionSource String           @map("execution_source")
+  status          AutomationStatus
+  totalTests      Int              @map("total_tests")
+  passed          Int
+  failed          Int
+  skipped         Int
+  flaky           Int              @default(0)
+  matched         Int              @default(0)
+  durationMs      Int              @map("duration_ms")
+  reportHash      String           @map("report_hash")
+  reportMetadata  Json             @map("report_metadata")
+  startedAt       DateTime?        @map("started_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testRun TestRun @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, reportHash])
+  @@index([projectId, createdAt])
+  @@map("automation_executions")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String?  @map("user_id") @db.Uuid
+  action         String
+  entityType     String   @map("entity_type")
+  entityId       String?  @map("entity_id")
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@map("audit_logs")
+}
+
+/// One row per AI call; used for per-user rate limiting and usage transparency.
+model AiRequest {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  feature        String
+  provider       String
+  model          String
+  success        Boolean
+  inputTokens    Int?     @map("input_tokens")
+  outputTokens   Int?     @map("output_tokens")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("ai_requests")
+}
+
+/// Project-scoped token for CI uploads of automation reports (scope: automation import only).
+model ApiToken {
+  id          String    @id @default(uuid()) @db.Uuid
+  projectId   String    @map("project_id") @db.Uuid
+  name        String
+  prefix      String
+  tokenHash   String    @unique @map("token_hash")
+  createdById String?   @map("created_by") @db.Uuid
+  lastUsedAt  DateTime? @map("last_used_at")
+  revokedAt   DateTime? @map("revoked_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@map("api_tokens")
+}

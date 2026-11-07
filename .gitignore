@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+.data/
+uploads/
+apps/api/storage/
+playwright-report/
+test-results/
+blob-report/
+*.log
+.DS_Store
+.data-db.log

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><title>Sample Login</title></head>
+  <body>
+    <form id="login">
+      <label>Email <input name="email" type="email" required /></label>
+      <label>Password <input name="password" type="password" required /></label>
+      <button type="submit">Sign in</button>
+    </form>
+    <p role="status" id="msg"></p>
+    <script>
+      document.getElementById('login').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const data = new FormData(e.target);
+        const ok = data.get('email') === 'qa@example.com' && data.get('password') === 'secret';
+        document.getElementById('msg').textContent = ok ? 'Welcome back' : 'Invalid credentials';
+      });
+    </script>
+  </body>
+</html>
