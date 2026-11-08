@@ -4,8 +4,8 @@
   "type": "module",
   "description": "Sample external Playwright project used to demonstrate and test report import into QA Testing Manager.",
   "scripts": {
-    "test": "playwright test",
-    "report": "playwright test --reporter=json > report.json || true"
+    "demo": "playwright test",
+    "report": "playwright test --reporter=json > report.json"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0"

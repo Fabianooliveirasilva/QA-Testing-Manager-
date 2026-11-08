@@ -1,0 +1,22 @@
+# Example for an EXTERNAL project that wants to send its Playwright results to QA Testing Manager.
+# Copy into that project's .github/workflows and set the QTM_URL variable and QTM_TOKEN secret.
+# This file is documentation: it is not triggered in this repository.
+name: Playwright → QA Testing Manager
+on: workflow_dispatch
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci && npx playwright install --with-deps
+      - name: Run tests (JSON reporter)
+        run: npx playwright test --reporter=json > report.json
+      - name: Upload report (runs even when tests failed; the job still fails)
+        if: ${{ always() }}
+        run: |
+          curl -fsS -X POST "${{ vars.QTM_URL }}/api/automation/playwright?runName=CI%20%23${{ github.run_number }}&environment=ci" \
+            -H "Authorization: Bearer ${{ secrets.QTM_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --data-binary @report.json

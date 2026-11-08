@@ -3,6 +3,7 @@ dist/
 coverage/
 .env
 .env.*
+!.env.docker.example
 !.env.example
 .data/
 uploads/
@@ -13,3 +14,4 @@ blob-report/
 *.log
 .DS_Store
 .data-db.log
+storage-e2e/

@@ -1,0 +1,59 @@
+# Full stack: PostgreSQL + API + web (nginx). Copy .env.docker.example to .env.docker first.
+services:
+  db:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: qtm
+      POSTGRES_USER: ${POSTGRES_USER:-qtm_owner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.docker}
+      APP_DB_USER: ${APP_DB_USER:-qtm_app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env.docker}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infrastructure/postgres/10-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d qtm']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [internal]
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      API_PORT: 4000
+      DATABASE_URL: postgresql://${APP_DB_USER:-qtm_app}:${APP_DB_PASSWORD}@db:5432/qtm?schema=public
+      MIGRATE_DATABASE_URL: postgresql://${POSTGRES_USER:-qtm_owner}:${POSTGRES_PASSWORD}@db:5432/qtm?schema=public
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      TRUST_PROXY: 'true'
+      STORAGE_LOCAL_DIR: /app/apps/api/storage
+      AI_PROVIDER: ${AI_PROVIDER:-none}
+      AI_MODEL: ${AI_MODEL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - uploads:/app/apps/api/storage
+    networks: [internal]
+
+  web:
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    restart: unless-stopped
+    depends_on:
+      api: { condition: service_healthy }
+    ports:
+      - '${WEB_PORT:-8080}:8080'
+    networks: [internal]
+
+volumes:
+  pgdata:
+  uploads:
+
+networks:
+  internal:
