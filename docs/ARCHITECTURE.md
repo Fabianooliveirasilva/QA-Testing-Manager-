@@ -6,6 +6,7 @@
 Browser (React SPA) ──/api──▶ nginx (prod) / Vite proxy (dev) ──▶ Express API ──▶ PostgreSQL
                                                                     │
                                                                     ├─ StorageProvider (local disk; S3-ready interface)
+                                                                    ├─ FileScanner (malware-scan hook; none bundled → NOT_SCANNED)
                                                                     ├─ Mailer (log mailer; SMTP-ready interface)
                                                                     └─ AiProvider (Anthropic adapter; provider-agnostic)
 CI (external project) ──Bearer qtm_ token──▶ POST /api/automation/playwright
@@ -39,7 +40,7 @@ utils/                   errors, crypto, permissions matrix, guards (cross-tenan
 
 ### Request pipeline
 
-`helmet → pino-http → cors → rate limit → /api/health → /api/automation (token, raw body) → json(1 MB) → cookies → loadSession → csrfProtection → /api/auth → requireAuth → /api/organizations | /api/projects/:projectId/* → 404 → errorHandler`
+`request id → helmet → pino-http → cors → rate limit → /api/health/{live,ready} → /api/automation (token, raw body) → json(1 MB) → cookies → loadSession → csrfProtection → /api/auth → requireAuth → /api/organizations | /api/projects/:projectId/* → 404 → errorHandler`
 
 ### Tenancy and authorization model
 
@@ -88,7 +89,9 @@ Notable choices:
 | Layer | Tool | Scope |
 | --- | --- | --- |
 | Unit | Vitest | Playwright report parser, file validation, redaction, permissions, config, shared schemas, web utils/components |
-| Integration / API / security | Vitest + Supertest | Real Express app + real PostgreSQL (`TEST_DATABASE_URL`, migrations applied in global setup, tables truncated per file) |
+| Integration / API | Vitest + Supertest (`integration` project) | Real Express app + real PostgreSQL (`TEST_DATABASE_URL`, migrations applied in global setup, tables truncated per file), incl. concurrency tests |
+| Security | Vitest + Supertest (`security` project) | Access control, auth, uploads, attack payloads — same real stack |
+| Infrastructure | `scripts/compose-smoke.sh` | Production Docker stack end to end |
 | E2E + accessibility | Playwright + axe-core | Real browser → Vite → API → PostgreSQL |
 
-The only test double is the AI provider in `tests/ai.test.ts` (the external vendor), documented as such.
+Test doubles exist only for external vendors: the AI provider (service-level double in `tests/ai.test.ts`; the Anthropic adapter itself runs the official SDK against a local API stub) and the malware engine (`EicarTestScanner`). See [TESTING.md](TESTING.md).

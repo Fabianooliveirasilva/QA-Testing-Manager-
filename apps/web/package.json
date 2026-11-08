@@ -10,7 +10,8 @@
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "screenshots": "tsx scripts/screenshots.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter": "5.3.0",
@@ -45,6 +46,7 @@
     "@vitest/coverage-v8": "4.1.12",
     "jsdom": "26.1.0",
     "tailwindcss": "4.3.5",
+    "tsx": "4.23.15",
     "tw-animate-css": "1.4.0",
     "vite": "7.3.7",
     "vitest": "4.1.12"

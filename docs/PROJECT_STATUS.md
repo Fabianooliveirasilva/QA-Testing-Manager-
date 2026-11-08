@@ -1,61 +1,85 @@
 # Project status
 
-_Last verified: 2026-11-07, on Linux, Node 22.19, PostgreSQL 17 (embedded-postgres), Chromium (Playwright 1.65)._
+_Last verified: 2026-11-08 (round 2), Linux, Node 22.19, PostgreSQL 17 (embedded-postgres locally,
+`postgres:17.6-alpine` in CI), Chromium via Playwright 1.65._
 
 ## Verified results
 
-| Check | Result |
+| Check | Result (local) |
 | --- | --- |
-| `pnpm lint` (ESLint strict TS) | ✅ 0 errors |
-| `pnpm typecheck` (tsc, all packages) | ✅ 0 errors |
-| Shared unit tests (Vitest) | ✅ 10 / 10 |
-| API unit tests | ✅ 44 / 44 |
-| API integration + API + security tests (real PostgreSQL) | ✅ 97 / 97 (7 files) |
+| `pnpm lint` | ✅ 0 errors |
+| `pnpm typecheck` | ✅ 0 errors |
+| Shared unit tests | ✅ 10 / 10 |
+| API unit tests | ✅ 59 / 59 |
+| API integration tests (real PostgreSQL) | ✅ 56 / 56 |
+| API security tests (real PostgreSQL) | ✅ 64 / 64 |
 | Web unit/component tests | ✅ 11 / 11 |
-| E2E (Playwright, real stack, incl. axe-core a11y) | ✅ 8 / 8; stability check `--repeat-each=3`: 24 / 24 |
+| E2E (Playwright + axe-core) | ✅ 8 / 8; stability `--repeat-each=3`: 24 / 24 |
+| Coverage thresholds (`pnpm test:coverage`) | ✅ met — see [TESTING.md](TESTING.md) |
+| `pnpm build` | ✅ |
 | `pnpm audit` | ✅ no known vulnerabilities |
-| `pnpm build` (API tsc + web Vite) | ✅ |
-| Docker images | ✅ API and web images build in GitHub Actions (job `docker`) |
-| Docker Compose stack (`up`, migrations, health checks, DB roles) | ⛔ **Not executed** — Docker is not installed on the development machine and CI only builds images |
-| GitHub Actions CI | ✅ All jobs green (quality, E2E, docker) — [run 42432289780](https://github.com/Fabianooliveirasilva/QA-Testing-Manager-/actions/runs/42432289780) |
-| Live AI provider call | ⛔ **Not executed** — no API key available. Logic tested with a provider test double. |
-| Coverage % | Not measured (no coverage tool configured; numbers above are test counts). |
+| Docker images build | ✅ in CI |
+| Docker Compose smoke test | Runs in CI (`docker` job); Docker is not installed on the development machine, so it was never run locally |
+| Live AI provider call | ⛔ not executed — no API key; adapter verified with the official SDK against a local API stub |
 
-Total automated tests executed in the final run: **170 passed, 0 failed, 0 skipped**
-(10 + 44 + 97 + 11 + 8).
+CI results for each commit: [GitHub Actions](https://github.com/Fabianooliveirasilva/QA-Testing-Manager-/actions/workflows/ci.yml).
 
-### Defects found by the tests and fixed (root cause, not by changing expectations)
+### Test counts
 
-1. Zod 4 applied `.default()` inside `.partial()` → PATCH reset omitted fields (e.g. bug severity). Fixed with `patchSchema()`, regression test added.
-2. Empty "Unassigned/No lead" selects submitted `''`, failing UUID validation with no visible message → forms silently did not submit. Mapped to `null` and errors surfaced.
-3. Login redirect race: guest guard redirected to `/` before honoring the original destination. Guard now redirects to `state.from`.
-4. Global search wrapper carried popover ARIA attributes on a `div` (axe `aria-allowed-attr`). Now uses `PopoverAnchor`.
-5. Stale UI data: suite case counts and dashboard metrics served from cache after changes. Now invalidated/refetched.
-6. Fresh clones had no generated Prisma client (only `typecheck` generated it), so the API could not start — found by the first CI E2E run. `@qtm/api` now runs `prisma generate` on `postinstall`.
+| | Round 1 | Round 2 |
+| --- | --- | --- |
+| Shared unit | 10 | 10 |
+| API unit | 44 | 59 |
+| API integration + security | 97 | 120 (56 + 64) |
+| Web unit | 11 | 11 |
+| E2E | 8 | 8 |
+| **Total** | **170** | **208** (208 passed, 0 failed, 0 skipped) |
 
-Test-side corrections (each proven by the failure output before changing): substring collisions in
-locators (`valid credentials` ⊂ `invalid credentials`, `Flaky` ⊂ title, toast text, empty-state
-heading) and a locator scoped to the wrong element. No assertion was removed or weakened.
+### Defects found by tests and fixed (root cause; each has a regression test that fails on the old code)
+
+Round 1:
+1. Zod 4 applied `.default()` inside `.partial()` → PATCH reset omitted fields.
+2. Empty "Unassigned/No lead" selects blocked form submission silently.
+3. Login redirect race ignored the original destination.
+4. `aria-allowed-attr` violation on the global search.
+5. Stale cached dashboard metrics and suite counts.
+6. Fresh clones had no generated Prisma client (API failed at startup in CI).
+
+Round 2 (audit — see the severity table in [SECURITY.md](SECURITY.md#round-2-audit-2026-11-08)):
+7. HIGH — password-reset token redeemable twice by concurrent requests.
+8. HIGH — AI daily quota bypassable by concurrency (8/8 accepted with a limit of 3).
+9. MEDIUM — results written after a run was completed (14/15 attempts) and runs closable several times.
+10. MEDIUM — removed members remained project lead/assignee; their CI tokens stayed active until use.
+11. MEDIUM — AI refusal/truncation reported as a generic 503 (parse error before `stop_reason` check).
+12. MEDIUM — nginx served `/assets/*` without security headers; duplicated `X-Frame-Options` on API.
+13. MEDIUM — run `finishedAt` could predate a result committed just before it (timestamp taken before the lock) — found by CI.
+14. LOW — locked accounts answered ~10× faster than failed logins (timing oracle).
+15. LOW — production could boot with localhost `APP_URL`/`WEB_ORIGIN` defaults.
+16. LOW — AI worst-case latency exceeded the proxy timeout.
+
+Test-side corrections (proven by the failure output): ambiguous Playwright locators (substring
+collisions with titles, toasts, empty states), an HTTP client that refuses CR/LF headers, an outdated
+assumption about the SDK's auth header. No assertion was removed or weakened.
 
 ## Feature completeness
 
-**Complete:** auth (register, login, logout, logout-all, lockout, reset, change password), organizations
-& members & roles, project CRUD/archive/team/lead, suites, test cases (all fields, steps, tags,
-search/filter/sort/pagination, duplicate, soft delete), test plans, manual runs, bug tracking with
-history, evidence uploads, Playwright JSON import (UI + CI token, dedup, linking), dashboard from real
-data, global search, activity, audit log, AI assistant (opt-in, quota, redaction, validation), seed,
-docs, CI workflow.
+**Complete:** authentication (register, login, logout, logout-all, lockout, reset, change password,
+registration switch, admin bootstrap CLI), organizations/members/roles, projects (CRUD, archive, team,
+lead, tokens), suites, test cases, plans, manual runs, bugs with history, evidence uploads (with scan
+hook), Playwright import (UI + CI token), dashboard, search, audit log, AI assistant (opt-in, quotas,
+redaction, validation), request correlation and health checks, seed, Docker, CI/CD, documentation.
 
-**Partial:**
-- Password reset e-mail delivery: link generated and logged in development; no production mail provider.
-- Member onboarding: only existing accounts can be added (no e-mail invitations).
-- AI: Anthropic adapter only; live call not verified (configuration dependency).
-- Evidence for automated results: Playwright attachment names/paths are recorded, binaries are not uploaded.
+**Partial / external dependencies:**
+- E-mail delivery (password reset, invitations) — no mail provider integrated.
+- AI — Anthropic adapter not verified with a live API key.
+- Malware scanning — hook only; no engine bundled (files stored as `NOT_SCANNED`).
+- Automated-run attachments — names/paths recorded, binaries not uploaded.
 
-**Not implemented (out of MVP scope):** remote test execution, MFA/SSO, notifications by e-mail,
-S3 storage driver, malware scanning, Redis-backed rate limiting for multi-instance deployments.
+**Not implemented:** remote test execution, MFA/SSO, invitations, S3 storage, shared rate-limit store,
+admin-initiated password reset.
 
-## How to resume work
+## Production readiness
 
-Read `CLAUDE.md` (conventions) → `docs/ARCHITECTURE.md` → `docs/DECISIONS.md`. Start PostgreSQL with
-`pnpm db:start`, then follow the README.
+Ready for a **controlled pilot** (single instance, HTTPS, backups, trusted users). Not ready for open
+public production until e-mail delivery exists (no password recovery path) — see
+[DEPLOYMENT.md](DEPLOYMENT.md#readiness-verdict).

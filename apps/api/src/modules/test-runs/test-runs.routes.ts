@@ -142,13 +142,13 @@ export function testRunsRouter(ctx: AppContext): Router {
   ] as const) {
     router.post(path, ...write, async (req, res) => {
       const run = await findRun(projectOf(req).id, req.params.runId);
-      // Conditional update: only one concurrent close can win.
-      const { count } = await ctx.prisma.testRun.updateMany({
-        where: { id: run.id, status: 'IN_PROGRESS' },
-        data: { status, finishedAt: new Date() },
+      const updated = await ctx.prisma.$transaction(async (tx) => {
+        // Same row lock as result writes: only one close wins, and finishedAt is taken after
+        // any in-flight result write has committed (so no result is ever newer than the close).
+        const [locked] = await tx.$queryRaw<{ status: string }[]>`SELECT status FROM test_runs WHERE id = ${run.id}::uuid FOR UPDATE`;
+        if (locked?.status !== 'IN_PROGRESS') throw conflict('Run is already closed');
+        return tx.testRun.update({ where: { id: run.id }, data: { status, finishedAt: new Date() } });
       });
-      if (count !== 1) throw conflict('Run is already closed');
-      const updated = await ctx.prisma.testRun.findUniqueOrThrow({ where: { id: run.id } });
       await projectAudit(ctx, req, `test_run.${status.toLowerCase()}`, 'test_run', run.id);
       res.json(updated);
     });

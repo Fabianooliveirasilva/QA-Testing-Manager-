@@ -20,14 +20,18 @@ value of the `qtm_csrf` cookie (also returned by `GET /auth/me`).
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR`, `BAD_REQUEST`, `INVALID_PASSWORD` | Invalid input / reference to a resource outside the project |
 | 401 | `UNAUTHORIZED` | No/expired session, wrong credentials or locked account (same message) |
-| 403 | `FORBIDDEN` | Role lacks permission, CSRF failure, archived project, AI disabled for the org |
+| 403 | `FORBIDDEN` | Role lacks permission, CSRF failure, archived project, AI disabled for the org, registration disabled |
 | 404 | `NOT_FOUND` | Unknown id **or** resource in an organization you do not belong to |
 | 409 | `CONFLICT` | Unique constraint, closed run, plan with runs, duplicate report (`details` has the existing ids) |
 | 413 | `PAYLOAD_TOO_LARGE`, `UPLOAD_ERROR` | JSON > 1 MB, file > 10 MB, report > 20 MB |
 | 415 | `UNSUPPORTED_FILE` | File type not allowed or content does not match |
-| 422 | `INVALID_REPORT`, `AI_REFUSAL` | Not a Playwright JSON report / AI provider declined |
-| 429 | `TOO_MANY_REQUESTS`, `AI_RATE_LIMITED` | Rate limit or daily AI quota |
+| 422 | `INVALID_REPORT`, `AI_REFUSAL`, `MALWARE_DETECTED` | Not a Playwright JSON report / AI provider declined / file rejected by the configured scanner |
+| 429 | `TOO_MANY_REQUESTS`, `AI_RATE_LIMITED` | Rate limit, or daily AI quota (per user or per organization) |
+| 500 | `INTERNAL_ERROR` | Unexpected error; body includes `requestId` for log correlation |
 | 502 / 503 | `AI_INVALID_OUTPUT` / `SERVICE_UNAVAILABLE` | AI returned an invalid structure / AI not configured or unavailable |
+
+**Correlation.** Every response has an `X-Request-Id` header (a well-formed incoming value is reused,
+otherwise one is generated).
 
 **Pagination.** List endpoints that paginate accept `page` (≥1) and `pageSize` (1–100) and return
 `{ items, total, page, pageSize }`.
@@ -38,7 +42,7 @@ value of the `qtm_csrf` cookie (also returned by `GET /auth/me`).
 
 | Method & path | Body | Notes |
 | --- | --- | --- |
-| `POST /auth/register` | `name, email, password, organizationName` | 201; creates user + organization (Owner) + session. Rate limited. |
+| `POST /auth/register` | `name, email, password, organizationName` | 201; creates user + organization (Owner) + session. Rate limited. 403 when `REGISTRATION_ENABLED=false`. |
 | `POST /auth/login` | `email, password` | 200; 5 failures lock the account 15 min. Rate limited per IP. |
 | `POST /auth/logout` | – | 204; deletes the session. |
 | `POST /auth/logout-all` | – | 204; deletes all sessions of the user. |
@@ -60,7 +64,7 @@ value of the `qtm_csrf` cookie (also returned by `GET /auth/me`).
 | `GET /organizations/:orgId/dashboard?projectId=` | V | Totals, 30‑day result counts & pass rate, 14‑day history, bugs by severity, recent runs, activity |
 | `GET /organizations/:orgId/search?q=` | V | Projects, test cases, bugs (min 2 chars) |
 | `GET /organizations/:orgId/audit-logs` | A | Paginated |
-| `GET /organizations/:orgId/ai/status` | V | `{ configured, provider, model, enabledForOrganization, dailyLimit, usedToday }` |
+| `GET /organizations/:orgId/ai/status` | V | `{ configured, provider, model, enabledForOrganization, dailyLimit, usedToday, organizationDailyLimit, organizationUsedToday }` |
 | `POST /organizations/:orgId/ai/test-cases {requirement, context?}` | M+ | `{ aiGenerated: true, provider, model, result: { testCases[] } }` |
 | `POST /organizations/:orgId/ai/playwright {scenario, baseUrl?, usePageObjects}` | M+ | `result: { files[{path, content}], notes }` |
 | `POST /organizations/:orgId/ai/bug-analysis {description}` | M+ | `result: { possibleCauses, missingInformation, reproductionSuggestions, suggestedSeverity, suggestedPriority, rationale }` |
@@ -122,7 +126,7 @@ Writes on an **archived** project return 403 (except unarchive).
 
 | `GET /?entityType=TEST_CASE\|TEST_RESULT\|BUG&entityId=` | V | |
 | --- | --- | --- |
-| `POST /` (multipart: `file`, `entityType`, `entityId`) | M+ | ≤ 10 MB; png, jpg/jpeg, webp, pdf, txt, log, json; content-validated |
+| `POST /` (multipart: `file`, `entityType`, `entityId`) | M+ | ≤ 10 MB; png, jpg/jpeg, webp, pdf, txt, log, json; content-validated; response includes `scanStatus` (`NOT_SCANNED` / `CLEAN`) |
 | `GET /:attachmentId/download[?inline=1]` | V | `Content-Disposition: attachment` (inline only for images), `nosniff`, sandbox CSP |
 | `DELETE /:attachmentId` | M+ | |
 
@@ -138,6 +142,9 @@ Writes on an **archived** project return 403 (except unarchive).
 Query: `runName`, `environment`. The token's creator must still be a non-viewer member; revoked
 tokens and archived projects are rejected. Response as above.
 
-## Health — `GET /health`
+## Health
 
-`{ "status": "ok" }` after a database round trip.
+| Endpoint | Meaning |
+| --- | --- |
+| `GET /health/live` | Process is up (no dependencies). |
+| `GET /health/ready` (alias `GET /health`) | `{ status: "ok", checks: { database: "ok" } }`, or **503** `{ status: "unavailable", … }` when PostgreSQL is unreachable. |

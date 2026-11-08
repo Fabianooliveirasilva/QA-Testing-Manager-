@@ -65,3 +65,27 @@ a regression test.
 ### D12 — Two database roles in Docker
 The schema owner runs migrations at container start; the API connects as `qtm_app` with only
 SELECT/INSERT/UPDATE/DELETE (default privileges), limiting the blast radius of an injection or RCE.
+
+### D13 — Concurrency control in the database, not in application memory
+Check-then-act paths are made atomic where the data lives: conditional `updateMany` claims (reset
+tokens), `SELECT … FOR UPDATE` on the run row (result writes vs. close), and a transaction-scoped
+advisory lock per organization for AI quota reservation. Works across multiple API instances; no
+external lock service needed. Each case has a concurrency test.
+
+### D14 — Malware scanning as a hook, not a fake
+`FileScanner` defines the contract; the default `NoopFileScanner` returns `NOT_SCANNED` and the status is
+stored per attachment and shown in the UI. Reporting files as "clean" without an engine would be
+misleading. A ClamAV (or SaaS) adapter can be added without touching routes.
+
+### D15 — Coverage thresholds as a ratchet
+Thresholds are set just below the first measured values per package and raised as risk-driven tests are
+added. Web unit coverage is intentionally low because UI behaviour is verified by Playwright E2E.
+
+### D16 — GitHub Actions on the Node 24 runtime
+`actions/checkout@v7.0.1`, `actions/setup-node@v7.1.0`, `actions/upload-artifact@v7.0.2`,
+`pnpm/action-setup@v6.1.1` (all `using: node24`, verified in each `action.yml`), pinned to exact
+versions to avoid unreviewed upgrades.
+
+### D17 — Private-deployment mode
+`REGISTRATION_ENABLED=false` plus an admin bootstrap CLI (`create-admin`) that never ships a known
+password: it takes `ADMIN_PASSWORD` from the environment or generates one and prints it once.
