@@ -2,7 +2,9 @@ import argon2 from 'argon2';
 import type { RegisterInput } from '@qtm/shared';
 import type { AppContext } from '../../context.js';
 import { randomToken, sha256, slugify } from '../../utils/crypto.js';
-import { AppError, badRequest, conflict, unauthorized } from '../../utils/errors.js';
+import { AppError, badRequest, conflict, serviceUnavailable, unauthorized } from '../../utils/errors.js';
+import { passwordResetEmail } from '../../services/email-templates.js';
+import { MailDeliveryError } from '../../services/mailer.js';
 import { audit } from '../../services/audit.js';
 
 const MAX_FAILED_LOGINS = 5;
@@ -117,28 +119,33 @@ export async function login(ctx: AppContext, email: string, password: string, me
 }
 
 export async function requestPasswordReset(ctx: AppContext, email: string): Promise<void> {
-  const user = await ctx.prisma.user.findUnique({ where: { email }, select: { id: true, email: true } });
+  // Checked before the user lookup so the answer never depends on whether the account exists.
+  const mailer = ctx.mailer;
+  if (!mailer) throw serviceUnavailable('Password recovery is not available on this server (e-mail delivery is not configured)');
+  const user = await ctx.prisma.user.findUnique({ where: { email }, select: { id: true, email: true, name: true } });
   if (!user) return;
   const token = randomToken();
+  const tokenHash = sha256(token);
   await ctx.prisma.$transaction([
     ctx.prisma.passwordResetToken.updateMany({
       where: { userId: user.id, usedAt: null },
       data: { usedAt: new Date() },
     }),
     ctx.prisma.passwordResetToken.create({
-      data: {
-        userId: user.id,
-        tokenHash: sha256(token),
-        expiresAt: new Date(Date.now() + RESET_TOKEN_MINUTES * 60_000),
-      },
+      data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + RESET_TOKEN_MINUTES * 60_000) },
     }),
   ]);
   const link = `${ctx.config.APP_URL.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
-  await ctx.mailer.send({
-    to: user.email,
-    subject: 'QA Testing Manager — password reset',
-    text: `Use the link below to reset your password. It expires in ${RESET_TOKEN_MINUTES} minutes.\n\n${link}\n\nIf you did not request this, ignore this email.`,
-  });
+  const content = passwordResetEmail({ link, minutes: RESET_TOKEN_MINUTES, name: user.name });
+  try {
+    const receipt = await mailer.send({ to: user.email, ...content });
+    ctx.logger.info({ userId: user.id, provider: receipt.provider, messageId: receipt.id }, 'password reset email handed to provider');
+  } catch (error) {
+    // Not delivered: invalidate the token that nobody received and record why (never the link or address).
+    await ctx.prisma.passwordResetToken.updateMany({ where: { tokenHash }, data: { usedAt: new Date() } });
+    const detail = error instanceof MailDeliveryError ? { kind: error.kind, status: error.status, code: error.code } : { kind: 'unknown' };
+    ctx.logger.error({ userId: user.id, provider: mailer.name, ...detail }, 'password reset email was NOT delivered');
+  }
 }
 
 export async function resetPassword(ctx: AppContext, token: string, password: string): Promise<void> {

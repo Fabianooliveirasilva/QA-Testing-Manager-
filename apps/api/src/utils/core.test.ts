@@ -62,3 +62,20 @@ describe('loadConfig — production safety', () => {
     expect(c.AI_DAILY_LIMIT_PER_ORG).toBe(500);
   });
 });
+
+describe('loadConfig — e-mail provider', () => {
+  const base = { DATABASE_URL: 'postgres://x' };
+  const prod = { ...base, NODE_ENV: 'production', COOKIE_SECURE: 'true', APP_URL: 'https://q.example.com', WEB_ORIGIN: 'https://q.example.com' };
+  it('defaults to log in development and none in production', () => {
+    expect(loadConfig(base).EMAIL_PROVIDER).toBe('log');
+    expect(loadConfig(prod).EMAIL_PROVIDER).toBe('none');
+  });
+  it('refuses the log mailer in production', () => {
+    expect(() => loadConfig({ ...prod, EMAIL_PROVIDER: 'log' })).toThrow(/would drop e-mails/);
+  });
+  it('requires a valid key and sender for resend', () => {
+    expect(() => loadConfig({ ...base, EMAIL_PROVIDER: 'resend', EMAIL_FROM: 'a@example.com' })).toThrow(/RESEND_API_KEY/);
+    expect(() => loadConfig({ ...base, EMAIL_PROVIDER: 'resend', RESEND_API_KEY: 're_0123456789ab', EMAIL_FROM: 'bad' })).toThrow(/EMAIL_FROM/);
+    expect(loadConfig({ ...base, EMAIL_PROVIDER: 'resend', RESEND_API_KEY: 're_0123456789ab', EMAIL_FROM: 'QA <a@example.com>' }).EMAIL_PROVIDER).toBe('resend');
+  });
+});

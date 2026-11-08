@@ -10,7 +10,13 @@ if (!process.env.TEST_DATABASE_URL && existsSync(rootEnv)) {
   if (line) process.env.TEST_DATABASE_URL = line.slice('TEST_DATABASE_URL='.length).trim();
 }
 
-const SECURITY_SUITES = ['tests/security.test.ts', 'tests/access-control.test.ts', 'tests/auth.test.ts', 'tests/attachments.test.ts'];
+const SECURITY_SUITES = [
+  'tests/security.test.ts',
+  'tests/access-control.test.ts',
+  'tests/auth.test.ts',
+  'tests/attachments.test.ts',
+  'tests/email.test.ts',
+];
 const dbProject = {
   environment: 'node' as const,
   globalSetup: ['tests/global-setup.ts'],
@@ -41,6 +47,10 @@ export default defineConfig({
       {
         // Access control, authentication, upload and attack-payload tests (OWASP-focused).
         test: { name: 'security', include: SECURITY_SUITES, ...dbProject },
+      },
+      {
+        // Real external services (Anthropic, Resend, ClamAV). Never part of the default run.
+        test: { name: 'live', include: ['tests-live/**/*.test.ts'], ...dbProject, testTimeout: 120_000 },
       },
     ],
     coverage: {

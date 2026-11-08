@@ -12,7 +12,8 @@ export interface AppContext {
   prisma: PrismaClient;
   logger: Logger;
   storage: StorageProvider;
-  mailer: Mailer;
+  /** null = e-mail disabled; password recovery reports itself unavailable. */
+  mailer: Mailer | null;
   ai: AiProvider | null;
   scanner: FileScanner;
 }

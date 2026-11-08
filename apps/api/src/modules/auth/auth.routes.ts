@@ -42,6 +42,11 @@ export function authRouter(ctx: AppContext): Router {
   };
   const meta = (req: Request) => ({ userAgent: req.get('user-agent'), ip: req.ip });
 
+  // Public: lets the UI hide flows the server cannot provide.
+  router.get('/capabilities', (_req, res) => {
+    res.json({ registration: ctx.config.REGISTRATION_ENABLED, passwordRecovery: ctx.mailer !== null });
+  });
+
   router.post('/register', credentialLimiter, async (req, res) => {
     if (!ctx.config.REGISTRATION_ENABLED) throw forbidden('Self-registration is disabled on this server. Ask an administrator for access.');
     const input = parse(registerSchema, req.body);
@@ -72,8 +77,8 @@ export function authRouter(ctx: AppContext): Router {
   router.post('/forgot-password', credentialLimiter, async (req, res) => {
     const { email } = parse(forgotPasswordSchema, req.body);
     await auth.requestPasswordReset(ctx, email);
-    // Same response whether or not the account exists (no user enumeration).
-    res.status(202).json({ message: 'If an account exists for this email, a reset link has been sent.' });
+    // Same response whether or not the account exists (no user enumeration); it makes no delivery claim.
+    res.status(202).json({ message: 'If an account exists for this email, we will send a reset link.' });
   });
 
   router.post('/reset-password', credentialLimiter, async (req, res) => {

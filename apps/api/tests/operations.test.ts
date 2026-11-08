@@ -125,3 +125,34 @@ describe('malware scanner integration', () => {
     expect(clean.body.scanStatus).toBe('CLEAN');
   });
 });
+
+describe('ClamAV adapter wiring (fail closed)', () => {
+  it('scanner unreachable: upload rejected with 503, nothing stored, event audited; readiness reports it', async () => {
+    const { ClamAvScanner } = await import('../src/services/clamav-scanner.js');
+    const { app } = createTestApp({ scanner: new ClamAvScanner({ host: '127.0.0.1', port: 1, timeoutMs: 1_000 }) });
+    const acc = await registerAccount(app);
+    const { projectId } = await createProject(acc);
+    const bug = await acc.client.post(`/api/projects/${projectId}/bugs`, { title: 'scan' });
+    const res = await acc.client
+      .post(`/api/projects/${projectId}/attachments`)
+      .field('entityType', 'BUG')
+      .field('entityId', bug.body.id)
+      .attach('file', Buffer.from('notes'), { filename: 'n.txt', contentType: 'text/plain' });
+    expect(res.status).toBe(503);
+    expect(res.body.error.code).toBe('SCANNER_UNAVAILABLE');
+    expect(await testPrisma().attachment.count({ where: { entityId: bug.body.id } })).toBe(0);
+    const logs = await acc.client.get(`/api/organizations/${acc.orgId}/audit-logs`);
+    expect(logs.body.items.some((l: { action: string }) => l.action === 'attachment.scan_failed')).toBe(true);
+
+    const ready = await request(app).get('/api/health/ready');
+    expect(ready.status).toBe(200);
+    expect(ready.body.checks).toEqual({ database: 'ok', malwareScanner: 'unavailable' });
+  });
+});
+
+describe('config: malware scanner', () => {
+  it('requires CLAMAV_HOST when MALWARE_SCANNER=clamav', async () => {
+    const { loadConfig } = await import('../src/config/env.js');
+    expect(() => loadConfig({ DATABASE_URL: 'postgres://x', MALWARE_SCANNER: 'clamav' })).toThrow(/CLAMAV_HOST/);
+  });
+});

@@ -9,7 +9,7 @@
     "build": "prisma generate && tsc -p tsconfig.build.json",
     "start": "node --env-file-if-exists=../../.env dist/server.js",
     "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --project unit --project integration --project security",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "db:generate": "prisma generate",
@@ -18,7 +18,11 @@
     "db:seed": "tsx --env-file-if-exists=../../.env prisma/seed.ts",
     "admin:create": "tsx --env-file-if-exists=../../.env src/cli/create-admin.ts",
     "test:security": "vitest run --project security",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --project unit --project integration --project security --coverage",
+    "test:live": "vitest run --project live",
+    "test:live:anthropic": "vitest run --project live tests-live/anthropic.live.test.ts",
+    "test:live:email": "vitest run --project live tests-live/email.live.test.ts",
+    "test:live:clamav": "vitest run --project live tests-live/clamav.live.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.6.0",

@@ -11,6 +11,8 @@ import { AppError, badRequest, notFound, parse } from '../../utils/errors.js';
 import { userSummary, uuidParam } from '../../utils/guards.js';
 import { projectAudit } from '../projects/project-audit.js';
 import { sanitizeFileName, validateUpload } from './file-validation.js';
+import { ScannerError } from '../../services/clamav-scanner.js';
+import type { ScanVerdict } from '../../services/file-scanner.js';
 import { projectOf, userOf } from '../../utils/request-context.js';
 
 const entitySchema = z.object({
@@ -74,7 +76,16 @@ export function attachmentsRouter(ctx: AppContext): Router {
       await assertEntity(projectOf(req).id, entityType, entityId);
       const fileName = sanitizeFileName(req.file.originalname);
       const mimeType = await validateUpload(fileName, req.file.mimetype, req.file.buffer);
-      const verdict = await ctx.scanner.scan(req.file.buffer, fileName);
+      let verdict: ScanVerdict;
+      try {
+        verdict = await ctx.scanner.scan(req.file.buffer, fileName);
+      } catch (error) {
+        // Fail closed: without a verdict the file is neither stored nor reported as safe.
+        const kind = error instanceof ScannerError ? error.kind : 'unknown';
+        await projectAudit(ctx, req, 'attachment.scan_failed', 'attachment', null, { fileName, scanner: ctx.scanner.name, kind });
+        ctx.logger.error({ requestId: req.requestId, scanner: ctx.scanner.name, kind }, 'malware scan failed; upload rejected');
+        throw new AppError(503, 'SCANNER_UNAVAILABLE', 'Malware scanning is temporarily unavailable; the file was not stored');
+      }
       if (verdict.status === 'INFECTED') {
         await projectAudit(ctx, req, 'attachment.rejected_malware', 'attachment', null, {
           fileName,

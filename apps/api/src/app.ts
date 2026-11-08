@@ -80,7 +80,9 @@ export function createApp(ctx: AppContext): Express {
   const readiness: express.RequestHandler = async (req, res) => {
     try {
       await ctx.prisma.$queryRaw`SELECT 1`;
-      res.json({ status: 'ok', checks: { database: 'ok' } });
+      // The scanner is reported but does not gate readiness: only uploads depend on it (they fail closed).
+      const scanner = ctx.scanner.ping ? await ctx.scanner.ping().then((ok) => (ok ? 'ok' : 'unavailable'), () => 'unavailable') : undefined;
+      res.json({ status: 'ok', checks: { database: 'ok', ...(scanner ? { malwareScanner: scanner } : {}) } });
     } catch (err) {
       ctx.logger.error({ err, requestId: req.requestId }, 'readiness check failed');
       res.status(503).json({ status: 'unavailable', checks: { database: 'unavailable' } });

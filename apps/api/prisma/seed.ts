@@ -14,7 +14,6 @@ import type { AppContext } from '../src/context.js';
 import { hashPassword } from '../src/modules/auth/auth.service.js';
 import { importPlaywrightReport } from '../src/modules/automation/automation.service.js';
 import { NoopFileScanner } from '../src/services/file-scanner.js';
-import { LogMailer } from '../src/services/mailer.js';
 import { LocalDiskStorage } from '../src/services/storage.js';
 
 const DEMO_SLUG = 'demo-workspace';
@@ -156,7 +155,7 @@ async function main() {
       prisma,
       logger,
       storage: new LocalDiskStorage(config.STORAGE_LOCAL_DIR),
-      mailer: new LogMailer(logger, true),
+      mailer: null,
       ai: null,
       scanner: new NoopFileScanner(),
     };

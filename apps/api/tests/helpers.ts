@@ -3,14 +3,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import type { Express } from 'express';
-import { pino } from 'pino';
+import { pino, type Logger } from 'pino';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config/env.js';
 import type { AppContext } from '../src/context.js';
 import type { AiCompletion, AiCompletionRequest, AiProvider } from '../src/modules/ai/ai.provider.js';
 import type { FileScanner, ScanVerdict } from '../src/services/file-scanner.js';
-import { MemoryMailer } from '../src/services/mailer.js';
+import { MemoryMailer, type Mailer } from '../src/services/mailer.js';
 import { LocalDiskStorage } from '../src/services/storage.js';
 import { NoopFileScanner } from '../src/services/file-scanner.js';
 
@@ -63,7 +63,9 @@ export interface TestApp {
   ai: FakeAiProvider;
 }
 
-export function createTestApp(options: { withAi?: boolean; env?: Record<string, string>; scanner?: FileScanner } = {}): TestApp {
+export function createTestApp(
+  options: { withAi?: boolean; env?: Record<string, string>; scanner?: FileScanner; mailer?: Mailer | null; logger?: Logger } = {},
+): TestApp {
   const config = loadConfig({
     NODE_ENV: 'test',
     DATABASE_URL: process.env.TEST_DATABASE_URL,
@@ -77,9 +79,9 @@ export function createTestApp(options: { withAi?: boolean; env?: Record<string, 
   const ctx: AppContext = {
     config,
     prisma: testPrisma(),
-    logger: pino({ level: 'silent' }),
+    logger: options.logger ?? pino({ level: 'silent' }),
     storage: new LocalDiskStorage(mkdtempSync(path.join(tmpdir(), 'qtm-storage-'))),
-    mailer,
+    mailer: options.mailer === undefined ? mailer : options.mailer,
     ai: options.withAi === false ? null : ai,
     scanner: options.scanner ?? new NoopFileScanner(),
   };
