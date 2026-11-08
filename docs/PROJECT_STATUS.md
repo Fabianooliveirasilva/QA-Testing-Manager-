@@ -15,8 +15,9 @@ _Last verified: 2026-11-07, on Linux, Node 22.19, PostgreSQL 17 (embedded-postgr
 | E2E (Playwright, real stack, incl. axe-core a11y) | ✅ 8 / 8; stability check `--repeat-each=3`: 24 / 24 |
 | `pnpm audit` | ✅ no known vulnerabilities |
 | `pnpm build` (API tsc + web Vite) | ✅ |
-| Docker images / compose | ⛔ **Blocked** — Docker is not installed on the build machine. Files are written; CI job `docker` builds both images. Not validated by me. |
-| GitHub Actions run | ⛔ **Not executed** — no remote repository configured. Workflow written; not run. |
+| Docker images | ✅ API and web images build in GitHub Actions (job `docker`) |
+| Docker Compose stack (`up`, migrations, health checks, DB roles) | ⛔ **Not executed** — Docker is not installed on the development machine and CI only builds images |
+| GitHub Actions CI | ✅ All jobs green (quality, E2E, docker) — [run 42432289780](https://github.com/Fabianooliveirasilva/QA-Testing-Manager-/actions/runs/42432289780) |
 | Live AI provider call | ⛔ **Not executed** — no API key available. Logic tested with a provider test double. |
 | Coverage % | Not measured (no coverage tool configured; numbers above are test counts). |
 
@@ -30,6 +31,7 @@ Total automated tests executed in the final run: **170 passed, 0 failed, 0 skipp
 3. Login redirect race: guest guard redirected to `/` before honoring the original destination. Guard now redirects to `state.from`.
 4. Global search wrapper carried popover ARIA attributes on a `div` (axe `aria-allowed-attr`). Now uses `PopoverAnchor`.
 5. Stale UI data: suite case counts and dashboard metrics served from cache after changes. Now invalidated/refetched.
+6. Fresh clones had no generated Prisma client (only `typecheck` generated it), so the API could not start — found by the first CI E2E run. `@qtm/api` now runs `prisma generate` on `postinstall`.
 
 Test-side corrections (each proven by the failure output before changing): substring collisions in
 locators (`valid credentials` ⊂ `invalid credentials`, `Flaky` ⊂ title, toast text, empty-state
