@@ -13,6 +13,7 @@ import { loadConfig } from '../src/config/env.js';
 import type { AppContext } from '../src/context.js';
 import { hashPassword } from '../src/modules/auth/auth.service.js';
 import { importPlaywrightReport } from '../src/modules/automation/automation.service.js';
+import { NoopFileScanner } from '../src/services/file-scanner.js';
 import { LogMailer } from '../src/services/mailer.js';
 import { LocalDiskStorage } from '../src/services/storage.js';
 
@@ -157,6 +158,7 @@ async function main() {
       storage: new LocalDiskStorage(config.STORAGE_LOCAL_DIR),
       mailer: new LogMailer(logger, true),
       ai: null,
+      scanner: new NoopFileScanner(),
     };
     await importPlaywrightReport(ctx, {
       projectId: project.id,

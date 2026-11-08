@@ -7,7 +7,7 @@ import { ATTACHMENT_ENTITY_TYPES, MAX_UPLOAD_BYTES } from '@qtm/shared';
 import type { AppContext } from '../../context.js';
 import { requireActiveProject, requirePermission } from '../../middleware/access.js';
 import { sha256 } from '../../utils/crypto.js';
-import { badRequest, notFound, parse } from '../../utils/errors.js';
+import { AppError, badRequest, notFound, parse } from '../../utils/errors.js';
 import { userSummary, uuidParam } from '../../utils/guards.js';
 import { projectAudit } from '../projects/project-audit.js';
 import { sanitizeFileName, validateUpload } from './file-validation.js';
@@ -54,6 +54,7 @@ export function attachmentsRouter(ctx: AppContext): Router {
         fileName: true,
         mimeType: true,
         size: true,
+        scanStatus: true,
         createdAt: true,
         uploadedBy: userSummary,
       },
@@ -73,6 +74,15 @@ export function attachmentsRouter(ctx: AppContext): Router {
       await assertEntity(projectOf(req).id, entityType, entityId);
       const fileName = sanitizeFileName(req.file.originalname);
       const mimeType = await validateUpload(fileName, req.file.mimetype, req.file.buffer);
+      const verdict = await ctx.scanner.scan(req.file.buffer, fileName);
+      if (verdict.status === 'INFECTED') {
+        await projectAudit(ctx, req, 'attachment.rejected_malware', 'attachment', null, {
+          fileName,
+          signature: verdict.signature,
+          scanner: ctx.scanner.name,
+        });
+        throw new AppError(422, 'MALWARE_DETECTED', 'The file was rejected by the malware scanner');
+      }
       const storageKey = `${projectOf(req).id}/${randomUUID()}`;
       await ctx.storage.put(storageKey, req.file.buffer);
       try {
@@ -86,9 +96,10 @@ export function attachmentsRouter(ctx: AppContext): Router {
             mimeType,
             size: req.file.size,
             sha256: sha256(req.file.buffer),
+            scanStatus: verdict.status,
             uploadedById: userOf(req).id,
           },
-          select: { id: true, fileName: true, mimeType: true, size: true, createdAt: true },
+          select: { id: true, fileName: true, mimeType: true, size: true, scanStatus: true, createdAt: true },
         });
         await projectAudit(ctx, req, 'attachment.uploaded', 'attachment', attachment.id, {
           entityType,

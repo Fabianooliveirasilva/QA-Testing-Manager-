@@ -163,3 +163,17 @@ describe('change password', () => {
     expect((await other.get('/api/auth/me')).status).toBe(401);
   });
 });
+
+describe('concurrency', () => {
+  it('a reset token can only be redeemed once, even by simultaneous requests', async () => {
+    const account = await registerAccount(app);
+    await request(app).post('/api/auth/forgot-password').send({ email: account.email });
+    const token = decodeURIComponent(/token=([^\s]+)/.exec(mailer.sent.at(-1)!.text)![1]!);
+    const results = await Promise.all(
+      ['Aa1-first-password', 'Bb2-second-password', 'Cc3-third-password'].map((password) =>
+        request(app).post('/api/auth/reset-password').send({ token, password }),
+      ),
+    );
+    expect(results.map((r) => r.status).sort()).toEqual([204, 400, 400]);
+  });
+});

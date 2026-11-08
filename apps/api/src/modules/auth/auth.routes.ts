@@ -9,7 +9,7 @@ import {
 } from '@qtm/shared';
 import type { AppContext } from '../../context.js';
 import { CSRF_COOKIE, SESSION_COOKIE, requireAuth } from '../../middleware/auth.js';
-import { parse } from '../../utils/errors.js';
+import { forbidden, parse } from '../../utils/errors.js';
 import * as auth from './auth.service.js';
 import { sessionOf, userOf } from '../../utils/request-context.js';
 
@@ -43,6 +43,7 @@ export function authRouter(ctx: AppContext): Router {
   const meta = (req: Request) => ({ userAgent: req.get('user-agent'), ip: req.ip });
 
   router.post('/register', credentialLimiter, async (req, res) => {
+    if (!ctx.config.REGISTRATION_ENABLED) throw forbidden('Self-registration is disabled on this server. Ask an administrator for access.');
     const input = parse(registerSchema, req.body);
     const { user, session } = await auth.register(ctx, input, meta(req));
     setSessionCookies(res, session);

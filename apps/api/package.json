@@ -15,7 +15,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",
     "db:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
-    "db:seed": "tsx --env-file-if-exists=../../.env prisma/seed.ts"
+    "db:seed": "tsx --env-file-if-exists=../../.env prisma/seed.ts",
+    "admin:create": "tsx --env-file-if-exists=../../.env src/cli/create-admin.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.6.0",

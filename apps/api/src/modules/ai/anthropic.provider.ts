@@ -14,7 +14,8 @@ export class AnthropicProvider implements AiProvider {
     apiKey: string,
     readonly model: string = DEFAULT_ANTHROPIC_MODEL,
   ) {
-    this.client = new Anthropic({ apiKey, timeout: 120_000, maxRetries: 2 });
+    // Worst case (timeout × (1 + retries)) must stay below the reverse-proxy read timeout (180 s).
+    this.client = new Anthropic({ apiKey, timeout: 60_000, maxRetries: 1 });
   }
 
   async complete<T>(request: AiCompletionRequest<T>): Promise<AiCompletion<T>> {

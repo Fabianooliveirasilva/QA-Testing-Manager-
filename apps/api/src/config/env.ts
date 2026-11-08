@@ -28,8 +28,13 @@ const envSchema = z.object({
   AI_MODEL: z.string().optional().default(''),
   ANTHROPIC_API_KEY: z.string().optional().default(''),
   AI_DAILY_LIMIT_PER_USER: z.coerce.number().int().min(0).default(50),
+  AI_DAILY_LIMIT_PER_ORG: z.coerce.number().int().min(0).default(500),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   TRUST_PROXY: boolean,
+  REGISTRATION_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
@@ -41,8 +46,11 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
     throw new Error(`Invalid environment configuration: ${issues}`);
   }
   const config = parsed.data;
-  if (config.NODE_ENV === 'production' && !config.COOKIE_SECURE) {
-    throw new Error('COOKIE_SECURE must be true in production');
+  if (config.NODE_ENV === 'production') {
+    if (!config.COOKIE_SECURE) throw new Error('COOKIE_SECURE must be true in production');
+    // Defaults point at localhost; in production they would break CORS and password-reset links silently.
+    const missing = ['APP_URL', 'WEB_ORIGIN'].filter((key) => !source[key]);
+    if (missing.length) throw new Error(`${missing.join(', ')} must be set explicitly in production`);
   }
   return config;
 }

@@ -108,3 +108,39 @@ describe('AI assistant', () => {
     expect(saved.body.status).toBe('DRAFT');
   });
 });
+
+describe('AI quota under concurrency', () => {
+  it('simultaneous requests cannot exceed the per-user daily limit', async () => {
+    const fresh = await registerAccount(app, 'Burst user', 'Burst Org');
+    expect((await fresh.client.patch(`/api/organizations/${fresh.orgId}`, { aiEnabled: true })).status).toBe(200);
+    ai.failWith = null;
+    ai.next = validCases;
+    ai.delayMs = 100;
+    try {
+      const responses = await Promise.all(
+        Array.from({ length: 8 }, () => fresh.client.post(`/api/organizations/${fresh.orgId}/ai/test-cases`, { requirement: 'x' })),
+      );
+      const statuses = responses.map((r) => r.status);
+      expect(statuses.filter((s) => s === 200)).toHaveLength(3);
+      expect(statuses.filter((s) => s === 429)).toHaveLength(5);
+      expect(await testPrisma().aiRequest.count({ where: { userId: fresh.userId } })).toBe(3);
+    } finally {
+      ai.delayMs = 0;
+    }
+  });
+
+  it('enforces the organization-wide daily limit across users', async () => {
+    const orgApp = createTestApp({ env: { AI_DAILY_LIMIT_PER_USER: '10', AI_DAILY_LIMIT_PER_ORG: '2' } });
+    orgApp.ai.next = validCases;
+    const a = await registerAccount(orgApp.app, 'Org quota A', 'Quota Org');
+    const b = await addMember(orgApp.app, a, 'MEMBER');
+    await a.client.patch(`/api/organizations/${a.orgId}`, { aiEnabled: true });
+    expect((await a.client.post(`/api/organizations/${a.orgId}/ai/test-cases`, { requirement: 'x' })).status).toBe(200);
+    expect((await b.client.post(`/api/organizations/${a.orgId}/ai/test-cases`, { requirement: 'x' })).status).toBe(200);
+    const third = await b.client.post(`/api/organizations/${a.orgId}/ai/test-cases`, { requirement: 'x' });
+    expect(third.status).toBe(429);
+    expect(third.body.error.message).toMatch(/Organization/);
+    const status = await a.client.get(`/api/organizations/${a.orgId}/ai/status`);
+    expect(status.body).toMatchObject({ organizationDailyLimit: 2, organizationUsedToday: 2 });
+  });
+});

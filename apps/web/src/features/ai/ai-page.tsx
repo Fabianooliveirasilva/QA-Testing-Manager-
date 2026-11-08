@@ -73,7 +73,7 @@ export function AiPage() {
       )}
       {s && ready && (
         <p className="mb-4 text-xs text-muted-foreground">
-          {s.provider} · {s.model} · {s.usedToday}/{s.dailyLimit} requests used today
+          {s.provider} · {s.model} · you: {s.usedToday}/{s.dailyLimit} today · organization: {s.organizationUsedToday}/{s.organizationDailyLimit} today
         </p>
       )}
       <Tabs defaultValue="cases">

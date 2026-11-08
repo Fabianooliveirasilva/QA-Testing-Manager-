@@ -228,3 +228,42 @@ describe('plans, manual runs, bugs and dashboard', () => {
     expect(actions).toEqual(expect.arrayContaining(['project.created', 'test_case.created', 'test_run.started', 'bug.created']));
   });
 });
+
+describe('run state under concurrency', () => {
+  const startRun = async (name: string) => {
+    const tc = await qa.client.post(`${base()}/test-cases`, { suiteId, title: `Race ${name}` });
+    const plan = await qa.client.post(`${base()}/test-plans`, { name: `Race plan ${name}`, testCaseIds: [tc.body.id] });
+    const run = await qa.client.post(`${base()}/test-runs`, { testPlanId: plan.body.id, name });
+    const detail = await qa.client.get(`${base()}/test-runs/${run.body.id}`);
+    return { runId: run.body.id as string, resultId: detail.body.results[0].id as string };
+  };
+
+  it('never records a result after the run was completed', async () => {
+    for (let i = 0; i < 10; i++) {
+      const { runId, resultId } = await startRun(`complete-${i}`);
+      const [complete, update] = await Promise.all([
+        qa.client.post(`${base()}/test-runs/${runId}/complete`),
+        qa.client.patch(`${base()}/test-runs/${runId}/results/${resultId}`, { status: 'PASSED' }),
+      ]);
+      expect(complete.status).toBe(200);
+      const after = await qa.client.get(`${base()}/test-runs/${runId}`);
+      const result = after.body.results[0];
+      if (update.status === 200) {
+        expect(new Date(result.executedAt).getTime()).toBeLessThanOrEqual(new Date(after.body.finishedAt).getTime());
+      } else {
+        expect(update.status).toBe(409);
+        expect(result.status).toBe('NOT_RUN');
+      }
+    }
+  });
+
+  it('only one of several simultaneous close requests succeeds', async () => {
+    const { runId } = await startRun('double-close');
+    const responses = await Promise.all([
+      qa.client.post(`${base()}/test-runs/${runId}/abort`),
+      qa.client.post(`${base()}/test-runs/${runId}/complete`),
+      qa.client.post(`${base()}/test-runs/${runId}/abort`),
+    ]);
+    expect(responses.map((r) => r.status).sort()).toEqual([200, 409, 409]);
+  });
+});

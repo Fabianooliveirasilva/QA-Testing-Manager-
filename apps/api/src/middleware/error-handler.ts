@@ -42,8 +42,10 @@ export function errorHandler(logger: Logger): ErrorRequestHandler {
       });
       return;
     }
-    logger.error({ err, path: req.path, method: req.method }, 'unhandled error');
-    // Never leak internals (stack traces, SQL) to clients.
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' } });
+    logger.error({ err, requestId: req.requestId, path: req.path, method: req.method }, 'unhandled error');
+    // Never leak internals (stack traces, SQL) to clients; the request id lets support find the log entry.
+    res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', requestId: req.requestId },
+    });
   };
 }

@@ -88,7 +88,11 @@ export async function login(ctx: AppContext, email: string, password: string, me
     await argon2.verify(await getDummyHash(), password).catch(() => false);
     throw invalid;
   }
-  if (user.lockedUntil && user.lockedUntil > new Date()) throw invalid;
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    // Same work as a normal attempt so response time does not reveal the lock.
+    await argon2.verify(await getDummyHash(), password).catch(() => false);
+    throw invalid;
+  }
 
   const valid = await argon2.verify(user.passwordHash, password);
   if (!valid) {
@@ -143,15 +147,21 @@ export async function resetPassword(ctx: AppContext, token: string, password: st
     throw badRequest('Reset link is invalid or has expired');
   }
   const passwordHash = await hashPassword(password);
-  await ctx.prisma.$transaction([
-    ctx.prisma.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
-    ctx.prisma.user.update({
+  await ctx.prisma.$transaction(async (tx) => {
+    // Claim the token atomically: concurrent requests with the same token cannot both succeed.
+    const now = new Date();
+    const claimed = await tx.passwordResetToken.updateMany({
+      where: { id: record.id, usedAt: null, expiresAt: { gt: now } },
+      data: { usedAt: now },
+    });
+    if (claimed.count !== 1) throw badRequest('Reset link is invalid or has expired');
+    await tx.user.update({
       where: { id: record.userId },
       data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
-    }),
+    });
     // Invalidate every existing session after a reset.
-    ctx.prisma.session.deleteMany({ where: { userId: record.userId } }),
-  ]);
+    await tx.session.deleteMany({ where: { userId: record.userId } });
+  });
 }
 
 export async function changePassword(

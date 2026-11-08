@@ -9,8 +9,10 @@ import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config/env.js';
 import type { AppContext } from '../src/context.js';
 import type { AiCompletion, AiCompletionRequest, AiProvider } from '../src/modules/ai/ai.provider.js';
+import type { FileScanner, ScanVerdict } from '../src/services/file-scanner.js';
 import { MemoryMailer } from '../src/services/mailer.js';
 import { LocalDiskStorage } from '../src/services/storage.js';
+import { NoopFileScanner } from '../src/services/file-scanner.js';
 
 let prisma: PrismaClient | null = null;
 
@@ -26,9 +28,11 @@ export class FakeAiProvider implements AiProvider {
   readonly prompts: string[] = [];
   next: unknown = null;
   failWith: Error | null = null;
+  delayMs = 0;
 
   async complete<T>(req: AiCompletionRequest<T>): Promise<AiCompletion<T>> {
     this.prompts.push(req.prompt);
+    if (this.delayMs) await new Promise((resolve) => setTimeout(resolve, this.delayMs));
     if (this.failWith) throw this.failWith;
     const parsed = req.schema.safeParse(this.next);
     if (!parsed.success) {
@@ -39,6 +43,19 @@ export class FakeAiProvider implements AiProvider {
   }
 }
 
+/**
+ * Test double for an external malware engine: flags the standard EICAR test string.
+ * It exercises our handling of scanner verdicts; it is not a malware scanner.
+ */
+export class EicarTestScanner implements FileScanner {
+  readonly name = 'eicar-test-double';
+  async scan(data: Buffer): Promise<ScanVerdict> {
+    return data.includes('EICAR-STANDARD-ANTIVIRUS-TEST-FILE')
+      ? { status: 'INFECTED', signature: 'EICAR-Test-File' }
+      : { status: 'CLEAN' };
+  }
+}
+
 export interface TestApp {
   app: Express;
   ctx: AppContext;
@@ -46,13 +63,14 @@ export interface TestApp {
   ai: FakeAiProvider;
 }
 
-export function createTestApp(options: { withAi?: boolean } = {}): TestApp {
+export function createTestApp(options: { withAi?: boolean; env?: Record<string, string>; scanner?: FileScanner } = {}): TestApp {
   const config = loadConfig({
     NODE_ENV: 'test',
     DATABASE_URL: process.env.TEST_DATABASE_URL,
     WEB_ORIGIN: 'http://localhost:5173',
     APP_URL: 'http://localhost:5173',
     AI_DAILY_LIMIT_PER_USER: '3',
+    ...options.env,
   });
   const mailer = new MemoryMailer();
   const ai = new FakeAiProvider();
@@ -63,6 +81,7 @@ export function createTestApp(options: { withAi?: boolean } = {}): TestApp {
     storage: new LocalDiskStorage(mkdtempSync(path.join(tmpdir(), 'qtm-storage-'))),
     mailer,
     ai: options.withAi === false ? null : ai,
+    scanner: options.scanner ?? new NoopFileScanner(),
   };
   return { app: createApp(ctx), ctx, mailer, ai };
 }

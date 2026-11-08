@@ -4,6 +4,7 @@ import { createApp } from './app.js';
 import { loadConfig } from './config/env.js';
 import type { AppContext } from './context.js';
 import { createAiProvider } from './modules/ai/ai.routes.js';
+import { NoopFileScanner } from './services/file-scanner.js';
 import { LogMailer } from './services/mailer.js';
 import { LocalDiskStorage } from './services/storage.js';
 
@@ -18,11 +19,12 @@ const ctx: AppContext = {
   storage: new LocalDiskStorage(config.STORAGE_LOCAL_DIR),
   mailer: new LogMailer(logger, config.NODE_ENV !== 'production'),
   ai: createAiProvider(config),
+  scanner: new NoopFileScanner(),
 };
 
 const server = createApp(ctx).listen(config.API_PORT, () => {
   logger.info(
-    { port: config.API_PORT, ai: ctx.ai ? `${ctx.ai.name}:${ctx.ai.model}` : 'not configured' },
+    { port: config.API_PORT, ai: ctx.ai ? `${ctx.ai.name}:${ctx.ai.model}` : 'not configured', malwareScanner: ctx.scanner.name },
     'QA Testing Manager API listening',
   );
 });

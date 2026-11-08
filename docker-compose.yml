@@ -37,6 +37,9 @@ services:
       AI_PROVIDER: ${AI_PROVIDER:-none}
       AI_MODEL: ${AI_MODEL:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_DAILY_LIMIT_PER_USER: ${AI_DAILY_LIMIT_PER_USER:-50}
+      AI_DAILY_LIMIT_PER_ORG: ${AI_DAILY_LIMIT_PER_ORG:-500}
+      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-true}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
       - uploads:/app/apps/api/storage

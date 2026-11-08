@@ -248,6 +248,7 @@ export interface Attachment {
   fileName: string;
   mimeType: string;
   size: number;
+  scanStatus: 'NOT_SCANNED' | 'CLEAN';
   createdAt: string;
   uploadedBy?: UserSummary | null;
 }
@@ -288,4 +289,6 @@ export interface AiStatus {
   enabledForOrganization: boolean;
   dailyLimit: number;
   usedToday: number;
+  organizationDailyLimit: number;
+  organizationUsedToday: number;
 }

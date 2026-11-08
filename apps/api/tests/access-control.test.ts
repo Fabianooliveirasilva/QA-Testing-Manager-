@@ -155,3 +155,25 @@ describe('role-based access control', () => {
     expect((await owner.client.post(`/api/projects/${p.projectId}/unarchive`)).status).toBe(200);
   });
 });
+
+describe('member removal', () => {
+  it('clears lead/assignee references and revokes CI tokens created by the removed member', async () => {
+    const admin = await addMember(app, owner, 'ADMIN');
+    const p = await createProject(owner, 'Removal project');
+    await owner.client.patch(`/api/projects/${p.projectId}`, { leadId: admin.userId });
+    const tc = await owner.client.post(`/api/projects/${p.projectId}/test-cases`, { suiteId: p.suiteId, title: 'Assigned', assigneeId: admin.userId });
+    const bug = await owner.client.post(`/api/projects/${p.projectId}/bugs`, { title: 'Assigned bug', assigneeId: admin.userId });
+    const token = await admin.client.post(`/api/projects/${p.projectId}/tokens`, { name: 'admin token' });
+    expect(token.status).toBe(201);
+
+    const members = await owner.client.get(`/api/organizations/${owner.orgId}/members`);
+    const m = members.body.items.find((x: { userId: string }) => x.userId === admin.userId);
+    expect((await owner.client.delete(`/api/organizations/${owner.orgId}/members/${m.id}`)).status).toBe(204);
+
+    expect((await owner.client.get(`/api/projects/${p.projectId}`)).body.leadId).toBeNull();
+    expect((await owner.client.get(`/api/projects/${p.projectId}/test-cases/${tc.body.id}`)).body.assigneeId).toBeNull();
+    expect((await owner.client.get(`/api/projects/${p.projectId}/bugs/${bug.body.id}`)).body.assigneeId).toBeNull();
+    const tokens = await owner.client.get(`/api/projects/${p.projectId}/tokens`);
+    expect(tokens.body.items.find((t: { id: string }) => t.id === token.body.id).revokedAt).not.toBeNull();
+  });
+});

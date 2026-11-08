@@ -116,7 +116,8 @@ export function AttachmentsPanel({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{a.fileName}</span>
                   <span className="text-xs text-muted-foreground">
-                    {formatBytes(a.size)} · {a.uploadedBy?.name ?? 'Unknown'} · {formatDateTime(a.createdAt)}
+                    {formatBytes(a.size)} · {a.uploadedBy?.name ?? 'Unknown'} · {formatDateTime(a.createdAt)} ·{' '}
+                    {a.scanStatus === 'CLEAN' ? 'malware scan: clean' : 'not malware-scanned'}
                   </span>
                 </span>
                 <Button asChild variant="ghost" size="icon" aria-label={`Download ${a.fileName}`}>

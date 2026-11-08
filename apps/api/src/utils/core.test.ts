@@ -49,3 +49,16 @@ describe('loadConfig', () => {
     expect(c.WEB_ORIGIN).toEqual(['http://a.test', 'http://b.test']);
   });
 });
+
+describe('loadConfig — production safety', () => {
+  const prod = { NODE_ENV: 'production', DATABASE_URL: 'postgres://x', COOKIE_SECURE: 'true' };
+  it('requires APP_URL and WEB_ORIGIN to be explicit in production', () => {
+    expect(() => loadConfig(prod)).toThrow(/APP_URL, WEB_ORIGIN must be set explicitly/);
+    expect(() => loadConfig({ ...prod, APP_URL: 'https://qa.example.com', WEB_ORIGIN: 'https://qa.example.com' })).not.toThrow();
+  });
+  it('defaults: registration enabled, org AI quota 500', () => {
+    const c = loadConfig({ DATABASE_URL: 'postgres://x' });
+    expect(c.REGISTRATION_ENABLED).toBe(true);
+    expect(c.AI_DAILY_LIMIT_PER_ORG).toBe(500);
+  });
+});

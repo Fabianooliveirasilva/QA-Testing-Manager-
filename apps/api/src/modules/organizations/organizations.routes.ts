@@ -144,9 +144,18 @@ export function organizationsRouter(ctx: AppContext): Router {
   router.delete('/:orgId/members/:memberId', org, requirePermission('members:manage'), async (req, res) => {
     const organizationId = membershipOf(req).organizationId;
     const target = await loadTargetMember(organizationId, req.params.memberId);
-    await ctx.prisma.$transaction([
-      ctx.prisma.projectMember.deleteMany({ where: { userId: target.userId, project: { organizationId } } }),
+    // A departing member must not stay referenced as lead/assignee or keep working CI tokens.
+    const inOrg = { project: { organizationId } };
+    const [, , leads, cases, bugs, tokens] = await ctx.prisma.$transaction([
+      ctx.prisma.projectMember.deleteMany({ where: { userId: target.userId, ...inOrg } }),
       ctx.prisma.organizationMember.delete({ where: { id: target.id } }),
+      ctx.prisma.project.updateMany({ where: { organizationId, leadId: target.userId }, data: { leadId: null } }),
+      ctx.prisma.testCase.updateMany({ where: { assigneeId: target.userId, ...inOrg }, data: { assigneeId: null } }),
+      ctx.prisma.bug.updateMany({ where: { assigneeId: target.userId, ...inOrg }, data: { assigneeId: null } }),
+      ctx.prisma.apiToken.updateMany({
+        where: { createdById: target.userId, revokedAt: null, ...inOrg },
+        data: { revokedAt: new Date() },
+      }),
     ]);
     await audit(ctx.prisma, {
       organizationId,
@@ -154,7 +163,13 @@ export function organizationsRouter(ctx: AppContext): Router {
       action: 'member.removed',
       entityType: 'member',
       entityId: target.id,
-      metadata: { userId: target.userId },
+      metadata: {
+        userId: target.userId,
+        projectsUnled: leads.count,
+        testCasesUnassigned: cases.count,
+        bugsUnassigned: bugs.count,
+        tokensRevoked: tokens.count,
+      },
     });
     res.status(204).end();
   });

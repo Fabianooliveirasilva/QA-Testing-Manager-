@@ -107,23 +107,27 @@ export function testRunsRouter(ctx: AppContext): Router {
   router.patch('/:runId/results/:resultId', ...write, async (req, res) => {
     const run = await findRun(projectOf(req).id, req.params.runId);
     if (run.source !== 'MANUAL') throw conflict('Automated results are imported and cannot be edited');
-    if (run.status !== 'IN_PROGRESS') throw conflict('Run is closed; results can no longer change');
     const resultId = uuidParam(req.params.resultId, 'Result');
     const input = parse(testResultUpdateSchema, req.body);
-    const existing = await ctx.prisma.testResult.findFirst({ where: { id: resultId, testRunId: run.id } });
-    if (!existing) throw notFound('Result');
     const executed = input.status !== 'NOT_RUN';
-    const updated = await ctx.prisma.testResult.update({
-      where: { id: existing.id },
-      data: {
-        status: input.status,
-        actualResult: input.actualResult,
-        notes: input.notes,
-        durationMs: input.durationSeconds == null ? null : input.durationSeconds * 1000,
-        executedById: executed ? userOf(req).id : null,
-        executedAt: executed ? new Date() : null,
-      },
-      include: { executedBy: userSummary },
+    const updated = await ctx.prisma.$transaction(async (tx) => {
+      // Lock the run row so completion/abort cannot interleave with a result write.
+      const [locked] = await tx.$queryRaw<{ status: string }[]>`SELECT status FROM test_runs WHERE id = ${run.id}::uuid FOR UPDATE`;
+      if (locked?.status !== 'IN_PROGRESS') throw conflict('Run is closed; results can no longer change');
+      const existing = await tx.testResult.findFirst({ where: { id: resultId, testRunId: run.id } });
+      if (!existing) throw notFound('Result');
+      return tx.testResult.update({
+        where: { id: existing.id },
+        data: {
+          status: input.status,
+          actualResult: input.actualResult,
+          notes: input.notes,
+          durationMs: input.durationSeconds == null ? null : input.durationSeconds * 1000,
+          executedById: executed ? userOf(req).id : null,
+          executedAt: executed ? new Date() : null,
+        },
+        include: { executedBy: userSummary },
+      });
     });
     await projectAudit(ctx, req, 'test_result.recorded', 'test_result', updated.id, {
       runId: run.id,
@@ -138,11 +142,13 @@ export function testRunsRouter(ctx: AppContext): Router {
   ] as const) {
     router.post(path, ...write, async (req, res) => {
       const run = await findRun(projectOf(req).id, req.params.runId);
-      if (run.status !== 'IN_PROGRESS') throw conflict('Run is already closed');
-      const updated = await ctx.prisma.testRun.update({
-        where: { id: run.id },
+      // Conditional update: only one concurrent close can win.
+      const { count } = await ctx.prisma.testRun.updateMany({
+        where: { id: run.id, status: 'IN_PROGRESS' },
         data: { status, finishedAt: new Date() },
       });
+      if (count !== 1) throw conflict('Run is already closed');
+      const updated = await ctx.prisma.testRun.findUniqueOrThrow({ where: { id: run.id } });
       await projectAudit(ctx, req, `test_run.${status.toLowerCase()}`, 'test_run', run.id);
       res.json(updated);
     });

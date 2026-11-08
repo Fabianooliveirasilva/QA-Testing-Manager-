@@ -90,6 +90,12 @@ enum AttachmentEntityType {
   BUG
 }
 
+/// Result of the configured malware scanner; infected files are rejected and never stored.
+enum ScanStatus {
+  NOT_SCANNED
+  CLEAN
+}
+
 enum AutomationStatus {
   PASSED
   FAILED
@@ -433,6 +439,7 @@ model Attachment {
   mimeType     String               @map("mime_type")
   size         Int
   sha256       String
+  scanStatus   ScanStatus           @default(NOT_SCANNED) @map("scan_status")
   uploadedById String?              @map("uploaded_by") @db.Uuid
   createdAt    DateTime             @default(now()) @map("created_at")
 

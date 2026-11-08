@@ -62,9 +62,11 @@ export function aiRouter(ctx: AppContext): Router {
       where: { id: membershipOf(req).organizationId },
       select: { aiEnabled: true },
     });
-    const usedToday = await ctx.prisma.aiRequest.count({
-      where: { userId: userOf(req).id, createdAt: { gte: startOfUtcDay() } },
-    });
+    const since = startOfUtcDay();
+    const [usedToday, organizationUsedToday] = await Promise.all([
+      ctx.prisma.aiRequest.count({ where: { userId: userOf(req).id, createdAt: { gte: since } } }),
+      ctx.prisma.aiRequest.count({ where: { organizationId: membershipOf(req).organizationId, createdAt: { gte: since } } }),
+    ]);
     res.json({
       configured: ctx.ai !== null,
       provider: ctx.ai?.name ?? null,
@@ -72,6 +74,8 @@ export function aiRouter(ctx: AppContext): Router {
       enabledForOrganization: organization.aiEnabled,
       dailyLimit: ctx.config.AI_DAILY_LIMIT_PER_USER,
       usedToday,
+      organizationDailyLimit: ctx.config.AI_DAILY_LIMIT_PER_ORG,
+      organizationUsedToday,
     });
   });
 
@@ -86,24 +90,24 @@ export function aiRouter(ctx: AppContext): Router {
     if (!organization.aiEnabled) {
       throw forbidden('AI assistant is disabled for this organization. An admin must enable it in Settings.');
     }
-    const usedToday = await ctx.prisma.aiRequest.count({
-      where: { userId: userOf(req).id, createdAt: { gte: startOfUtcDay() } },
-    });
-    if (usedToday >= ctx.config.AI_DAILY_LIMIT_PER_USER) throw tooManyRequests('Daily AI usage limit reached');
-
-    const record = (success: boolean, inputTokens: number | null = null, outputTokens: number | null = null) =>
-      ctx.prisma.aiRequest.create({
-        data: {
-          userId: userOf(req).id,
-          organizationId,
-          feature,
-          provider: provider.name,
-          model: provider.model,
-          success,
-          inputTokens,
-          outputTokens,
-        },
+    const userId = userOf(req).id;
+    // Reserve quota atomically: an advisory lock per organization serializes the count + insert,
+    // so concurrent requests cannot exceed the user or organization daily limits.
+    const reservation = await ctx.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`ai-quota:${organizationId}`}))`;
+      const since = startOfUtcDay();
+      const [userUsed, orgUsed] = await Promise.all([
+        tx.aiRequest.count({ where: { userId, createdAt: { gte: since } } }),
+        tx.aiRequest.count({ where: { organizationId, createdAt: { gte: since } } }),
+      ]);
+      if (userUsed >= ctx.config.AI_DAILY_LIMIT_PER_USER) throw tooManyRequests('Daily AI usage limit reached');
+      if (orgUsed >= ctx.config.AI_DAILY_LIMIT_PER_ORG) throw tooManyRequests('Organization daily AI usage limit reached');
+      return tx.aiRequest.create({
+        data: { userId, organizationId, feature, provider: provider.name, model: provider.model, success: false },
       });
+    });
+    const record = (success: boolean, inputTokens: number | null = null, outputTokens: number | null = null) =>
+      ctx.prisma.aiRequest.update({ where: { id: reservation.id }, data: { success, inputTokens, outputTokens } });
 
     try {
       const result = await provider.complete({
