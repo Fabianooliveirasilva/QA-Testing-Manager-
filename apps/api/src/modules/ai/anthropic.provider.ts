@@ -13,14 +13,18 @@ export class AnthropicProvider implements AiProvider {
   constructor(
     apiKey: string,
     readonly model: string = DEFAULT_ANTHROPIC_MODEL,
+    /** Test hook: point the official SDK at a local stub of the API. */
+    clientOptions: { baseURL?: string; timeout?: number } = {},
   ) {
     // Worst case (timeout × (1 + retries)) must stay below the reverse-proxy read timeout (180 s).
-    this.client = new Anthropic({ apiKey, timeout: 60_000, maxRetries: 1 });
+    this.client = new Anthropic({ apiKey, timeout: 60_000, maxRetries: 1, ...clientOptions });
   }
 
   async complete<T>(request: AiCompletionRequest<T>): Promise<AiCompletion<T>> {
     try {
-      const response = await this.client.messages.parse({
+      // messages.create (not .parse): stop_reason must be inspected before any JSON parsing,
+      // otherwise refusals and truncated answers surface as generic SDK parse errors.
+      const response = await this.client.messages.create({
         model: this.model,
         max_tokens: request.maxTokens,
         system: request.system,
@@ -33,8 +37,15 @@ export class AnthropicProvider implements AiProvider {
       if (response.stop_reason === 'max_tokens') {
         throw new AiProviderError('invalid_output', 'The AI response was truncated; try a shorter input');
       }
-      // Re-validate locally: the schema is the contract regardless of what the provider claims.
-      const parsed = request.schema.safeParse(response.parsed_output);
+      const text = response.content.flatMap((block) => (block.type === 'text' ? [block.text] : [])).join('');
+      let json: unknown;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        throw new AiProviderError('invalid_output', 'The AI response was not valid JSON');
+      }
+      // The schema is the contract regardless of what the provider claims.
+      const parsed = request.schema.safeParse(json);
       if (!parsed.success) throw new AiProviderError('invalid_output', 'The AI response did not match the expected format');
       return {
         data: parsed.data,

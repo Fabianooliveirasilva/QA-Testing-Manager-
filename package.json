@@ -19,7 +19,8 @@
     "test": "pnpm build:shared && pnpm -r test",
     "test:e2e": "pnpm --filter @qtm/web test:e2e",
     "build": "pnpm build:shared && pnpm --filter @qtm/api build && pnpm --filter @qtm/web build",
-    "audit:deps": "pnpm audit --audit-level high"
+    "audit:deps": "pnpm audit --audit-level high",
+    "test:coverage": "pnpm build:shared && pnpm -r --workspace-concurrency=1 test:coverage"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

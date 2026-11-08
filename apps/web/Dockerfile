@@ -12,6 +12,7 @@ RUN pnpm --filter @qtm/shared build && pnpm --filter @qtm/web build
 
 FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
 COPY infrastructure/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY infrastructure/nginx/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=5s --retries=5 CMD wget -qO- http://127.0.0.1:8080/ >/dev/null || exit 1
