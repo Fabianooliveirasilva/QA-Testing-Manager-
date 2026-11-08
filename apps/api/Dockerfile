@@ -6,6 +6,7 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/api/package.json apps/api/
+COPY apps/api/prisma/schema.prisma apps/api/prisma/schema.prisma
 RUN pnpm install --frozen-lockfile --filter @qtm/api...
 COPY packages/shared packages/shared
 COPY apps/api apps/api
