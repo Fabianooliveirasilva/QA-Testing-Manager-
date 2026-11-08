@@ -19,10 +19,10 @@ _Last verified: 2026-11-08 (round 2), Linux, Node 22.19, PostgreSQL 17 (embedded
 | `pnpm build` | ✅ |
 | `pnpm audit` | ✅ no known vulnerabilities |
 | Docker images build | ✅ in CI |
-| Docker Compose smoke test | Runs in CI (`docker` job); Docker is not installed on the development machine, so it was never run locally |
+| Docker Compose smoke test | ✅ in CI ([run 42435524361](https://github.com/Fabianooliveirasilva/QA-Testing-Manager-/actions/runs/42435524361)): boot, migrations, DB least privilege, proxy, security headers, session + CSRF flow, persistence across restart, graceful shutdown. Not run locally (no Docker on the development machine). |
 | Live AI provider call | ⛔ not executed — no API key; adapter verified with the official SDK against a local API stub |
 
-CI results for each commit: [GitHub Actions](https://github.com/Fabianooliveirasilva/QA-Testing-Manager-/actions/workflows/ci.yml).
+All CI jobs (quality, coverage, E2E, Docker + Compose) green on [run 42435524361](https://github.com/Fabianooliveirasilva/QA-Testing-Manager-/actions/runs/42435524361). CI results for each commit: [GitHub Actions](https://github.com/Fabianooliveirasilva/QA-Testing-Manager-/actions/workflows/ci.yml).
 
 ### Test counts
 
