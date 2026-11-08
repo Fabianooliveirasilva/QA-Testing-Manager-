@@ -20,7 +20,7 @@ export default defineConfig({
   workers: 1,
   retries: process.env.CI ? 1 : 0,
   forbidOnly: !!process.env.CI,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }], ['json', { outputFile: 'test-results/e2e-report.json' }]] : [['list'], ['json', { outputFile: 'test-results/e2e-report.json' }]],
+  reporter: process.env.CI ? [['list'], ['github'], ['html', { open: 'never' }], ['json', { outputFile: 'test-results/e2e-report.json' }]] : [['list'], ['json', { outputFile: 'test-results/e2e-report.json' }]],
   use: {
     baseURL: `http://localhost:${WEB_PORT}`,
     trace: 'retain-on-failure',
